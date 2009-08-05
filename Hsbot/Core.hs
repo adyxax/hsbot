@@ -3,10 +3,12 @@ module Hsbot.Core
     , Config(..)
     , IrcServer(..)
     , newbot
+    , sendstr
     ) where
 
 import qualified Data.Map as M
 import System.IO (Handle)
+import Text.Printf (hPrintf)
 
 -- | An IRC Bot server state (socket handles)
 data Bot = Bot
@@ -33,4 +35,7 @@ data IrcServer = IrcServer
 -- | Returns a new, empty bot
 newbot :: Bot
 newbot = Bot (M.empty)
+
+-- | Send a string over handle
+sendstr handle str = hPrintf handle "%s\r\n" str
 

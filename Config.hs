@@ -10,7 +10,7 @@ import Hsbot.Core
 kro = IrcServer
     { address        = "kro.corp"
     , port           = 6667
-    , channels       = ["#geek"]
+    , channels       = ["#geek", "#shbot"]
     , nickname       = "hsbot"
     , password       = ""
     , realname       = "The One True bot, with it's haskell soul."

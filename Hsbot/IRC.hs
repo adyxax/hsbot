@@ -1,11 +1,15 @@
 module Hsbot.IRC
     ( IrcInput(..)
     , IrcOutput(..)
+    , connectServer
+    , initServer
     , parseIrcMsg
     )where
 
-import qualified Network.IRC as Irc
-import System.IO (Handle)
+import Control.Monad
+import Network
+import qualified Network.IRC as IRC
+import System.IO
 
 import Hsbot.Core
 
@@ -31,4 +35,23 @@ data IrcOutput = Str String              -- a regular string
 
 parseIrcMsg :: String -> IrcInput
 parseIrcMsg _ = Err "Parsing not yet implemented"
+
+-- | Connects to a server
+connectServer :: IrcServer -> IO (IrcServer, Handle)
+connectServer server = do
+    let name  = address server
+        port_number = port server
+    handle <- connectTo name (PortNumber $ fromIntegral port_number)
+    hSetBuffering handle NoBuffering
+    return (server, handle)
+
+-- | Setup a newly connected server by sending nick and join stuff
+initServer :: (IrcServer, Handle) -> IO ()
+initServer (server, handle) = do
+    sendstr handle (IRC.encode $ IRC.nick (nickname server))
+    sendstr handle (IRC.encode $ IRC.user (nickname server) "0" "*" (realname server))
+    when (not . null $ (password server)) $ do
+        sendstr handle (IRC.encode $ IRC.privmsg "nickserv" ("identify" ++ (password server)))
+    mapM_ (sendstr handle . IRC.encode . IRC.joinChan) (channels server)
+    return ()
 
