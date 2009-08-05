@@ -1,7 +1,7 @@
 module Hsbot.Core
     ( Bot(..)
     , Config(..)
-    , Server(..)
+    , IrcServer(..)
     , newbot
     ) where
 
@@ -10,17 +10,17 @@ import System.IO (Handle)
 
 -- | An IRC Bot server state (socket handles)
 data Bot = Bot
-    { joinedServers :: M.Map Server Handle -- servers we are connected to
+    { joinedServers :: M.Map IrcServer Handle -- servers we are connected to
     } deriving (Eq, Show)
 
 -- | Configuration data type
 data Config = Config {
    commandPrefixes :: String,   -- command prefixes, for example @[\'>\',\'@\',\'?\']@
-   servers         :: [Server]  -- list of 'Server's to connect to
+   ircServers      :: [IrcServer]  -- list of 'Server's to connect to
 } deriving (Eq,Show)
 
 -- | An IRC server
-data Server = Server
+data IrcServer = IrcServer
     { address        :: String   -- the server's address
     , port           :: Int      -- the server's port
     , channels       :: [String] -- a list of channels to join

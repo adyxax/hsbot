@@ -7,7 +7,7 @@ import Hsbot.Core
 -- | Imported plugins goes there
 
 -- | User server
-kro = Server
+kro = IrcServer
     { address        = "kro.corp"
     , port           = 6667
     , channels       = ["#geek"]
@@ -21,6 +21,6 @@ kro = Server
 config :: Config
 config = Config
     { commandPrefixes = ['@']
-    , servers         = [kro]
+    , ircServers         = [kro]
     }
 

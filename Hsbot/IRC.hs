@@ -22,9 +22,9 @@ data IrcInput = Cmd  User Channel (Command, Maybe String) -- a regular command
 
 -- | Data that can go over the remote channel
 data IrcOutput = Str String              -- a regular string
-               | Quit (Server, Handle)   -- a quit message from a server
-               | Join (Server, Channel)  -- joined a channel
-               | Part (Server, Channel)  -- parted the channel
+               | Quit (IrcServer, Handle)   -- a quit message from a server
+               | Join (IrcServer, Channel)  -- joined a channel
+               | Part (IrcServer, Channel)  -- parted the channel
                | Reboot                  -- reboot message sent
                | Nil                     -- signifies thread death, only happens after reboot
     deriving (Eq,Show)
