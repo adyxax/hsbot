@@ -4,9 +4,12 @@ module Hsbot.IRC
     , connectServer
     , initServer
     , parseIrcMsg
+    , ping
+    , pong
     )where
 
 import Control.Monad
+import Data.List(isPrefixOf)
 import Network
 import qualified Network.IRC as IRC
 import System.IO
@@ -55,4 +58,12 @@ initServer (server, handle) = do
         sendstr handle (IRC.encode $ IRC.privmsg "nickserv" ("identify" ++ (password server)))
     mapM_ (sendstr handle . IRC.encode . IRC.joinChan) (channels server)
     return ()
+
+-- | Check if a message is a PING
+ping :: String -> Bool
+ping = isPrefixOf "PING :"
+
+-- | Send a pong message given a ping message
+pong :: Handle -> String -> IO ()
+pong handle str = sendstr handle $ "PONG " ++ (drop 5 str)
 

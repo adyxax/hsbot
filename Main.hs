@@ -2,11 +2,14 @@ module Main where
 import System.Exit
 import System.Plugins
 
+ghcargs :: [String]
+ghcargs = ["-XPatternGuards"] 
+
 -- | Dynamic launching function
 main :: IO ()
 main = do
     putStrLn "hsbot starting..."
-    m <- makeAll "Hsbot.hs" [] -- ghcargs
+    m <- makeAll "Hsbot.hs" ghcargs
     (modul', imain) <- case m of
         MakeSuccess _ _ -> do
             ldstat <- load_ "Hsbot/Main.o" [".","Hsbot","Hsbot/Plugins"] "imain"
@@ -26,7 +29,7 @@ main = do
 -- | Dynamic rebooting function
 reboot :: Module -> a -> IO ()
 reboot modul' state = do
-    mkstat <- makeAll "Hsbot.hs" [] --ghcargs
+    mkstat <- makeAll "Hsbot.hs" ghcargs
     case mkstat of
         MakeSuccess _ _ -> do
             unloadAll modul'
