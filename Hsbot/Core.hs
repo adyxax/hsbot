@@ -37,5 +37,6 @@ newbot :: Bot
 newbot = Bot (M.empty)
 
 -- | Send a string over handle
+sendstr :: Handle -> String -> IO ()
 sendstr handle str = hPrintf handle "%s\r\n" str
 

@@ -25,16 +25,16 @@ main = do
 
 -- | Dynamic rebooting function
 reboot :: Module -> a -> IO ()
-reboot modul' st = do
+reboot modul' state = do
     mkstat <- makeAll "Hsbot.hs" [] --ghcargs
     case mkstat of
         MakeSuccess _ _ -> do
             unloadAll modul'
             ldstat <- load_ "Hsbot/Main.o" [".","Hsbot","Hsbot/Plugins"] "imain'"
             case ldstat of
-                LoadSuccess v imain' -> do
+                LoadSuccess modul'' imain' -> do
                     putStrLn "REBOOT: Successful recompilation & reloading, rebooting..."
-                    imain' v reboot st
+                    imain' modul'' reboot state
                 LoadFailure e -> fatality e
         MakeFailure e -> fatality e
     where

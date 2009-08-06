@@ -25,14 +25,15 @@ data IrcInput = Cmd  User Channel (Command, Maybe String) -- a regular command
     deriving (Eq,Show)
 
 -- | Data that can go over the remote channel
-data IrcOutput = Str String              -- a regular string
+data IrcOutput = Str String                 -- a regular string
                | Quit (IrcServer, Handle)   -- a quit message from a server
                | Join (IrcServer, Channel)  -- joined a channel
                | Part (IrcServer, Channel)  -- parted the channel
-               | Reboot                  -- reboot message sent
-               | Nil                     -- signifies thread death, only happens after reboot
+               | Reboot                     -- reboot message sent
+               | Nil                        -- signifies thread death, only happens after reboot
     deriving (Eq,Show)
 
+-- | Parses an IrcInput
 parseIrcMsg :: String -> IrcInput
 parseIrcMsg _ = Err "Parsing not yet implemented"
 
@@ -48,9 +49,9 @@ connectServer server = do
 -- | Setup a newly connected server by sending nick and join stuff
 initServer :: (IrcServer, Handle) -> IO ()
 initServer (server, handle) = do
-    sendstr handle (IRC.encode $ IRC.nick (nickname server))
+    sendstr handle (IRC.encode . IRC.nick $ nickname server)
     sendstr handle (IRC.encode $ IRC.user (nickname server) "0" "*" (realname server))
-    when (not . null $ (password server)) $ do
+    when (not . null $ password server) $ do
         sendstr handle (IRC.encode $ IRC.privmsg "nickserv" ("identify" ++ (password server)))
     mapM_ (sendstr handle . IRC.encode . IRC.joinChan) (channels server)
     return ()

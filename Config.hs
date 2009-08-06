@@ -7,6 +7,7 @@ import Hsbot.Core
 -- | Imported plugins goes there
 
 -- | User server
+kro :: IrcServer
 kro = IrcServer
     { address        = "kro.corp"
     , port           = 6667
