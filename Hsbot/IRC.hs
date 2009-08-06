@@ -38,7 +38,7 @@ data IrcOutput = Str String                 -- a regular string
 
 -- | Parses an IrcInput
 parseIrcMsg :: String -> IrcInput
-parseIrcMsg _ = Err "Parsing not yet implemented"
+parseIrcMsg str = (Cmd "user" "channel" (str, Just "args"))
 
 -- | Connects to a server
 connectServer :: IrcServer -> IO (IrcServer, Handle)
