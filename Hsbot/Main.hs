@@ -28,13 +28,13 @@ imain' modul' reboot bot = do
     putStrLn "Joining channels..."
     mapM_ initServer servers'
     putStrLn "Spawning threads..."
-    chan <- newChan :: IO (Chan IrcOutput)
+    chan <- newChan :: IO (Chan IrcLine)
     mapM_ (forkIO . listener chan) servers'
     state <- monitor chan bot
     reboot modul' bot
 
 -- | Bot main loop, monitors the threads states and handle reboot
-monitor :: (Chan IrcOutput) -> Bot -> IO Bot
+monitor :: (Chan IrcLine) -> Bot -> IO Bot
 monitor chan bot = do
     loop bot
         where loop bot' = do
@@ -46,7 +46,7 @@ monitor chan bot = do
                     Str str -> putStrLn ("received : " ++ str) >> loop bot'
 
 -- | Thread entry point for socket listeners
-listener :: (Chan IrcOutput) -> (IrcServer, Handle) -> IO ()
+listener :: (Chan IrcLine) -> (IrcServer, Handle) -> IO ()
 listener chan (server, handle) = forever $ do
     str <- hGetLine handle
     writeChan chan (Str str)

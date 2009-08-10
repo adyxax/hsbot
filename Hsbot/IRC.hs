@@ -1,6 +1,5 @@
 module Hsbot.IRC
-    ( IrcInput(..)
-    , IrcOutput(..)
+    ( IrcLine(..)
     , connectServer
     , initServer
     , parseIrcMsg
@@ -21,17 +20,12 @@ type Channel = String
 type Command = String
 type Args    = [String]
 
--- | Information from IRC
-data IrcInput = Cmd  User Channel (Command, Maybe String) -- a regular command
-              | Line User Channel String                  -- a normal line of little significance
-              | Err String                                -- an error occured in parsing
-    deriving (Eq,Show)
-
--- | Data that can go over the remote channel
-data IrcOutput = Str String                 -- a regular string
+-- | An IRC line
+data IrcLine = Str String                 -- a regular string
                | Quit (IrcServer, Handle)   -- a quit message from a server
                | Join (IrcServer, Channel)  -- joined a channel
                | Part (IrcServer, Channel)  -- parted the channel
+               | Ping (String)              -- pinged by the server
                | Reboot                     -- reboot message sent
                | Nil                        -- signifies thread death, only happens after reboot
     deriving (Eq,Show)
