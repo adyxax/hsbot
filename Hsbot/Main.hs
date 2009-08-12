@@ -6,6 +6,7 @@ module Hsbot.Main
 import Control.Concurrent
 import Control.Concurrent.Chan
 import Control.Monad
+import qualified Data.Map as M
 import System.IO
 import System.Plugins
 
@@ -22,16 +23,19 @@ imain modul' reboot = imain' modul' reboot newbot
 -- | Bot's main entry point
 imain' :: Module -> Reboot -> Bot -> IO ()
 imain' modul' reboot bot = do
-    putStrLn "yeah"
+    -- The chan passing to reboot (or another way to keep it) is still missing
     putStrLn "Connecting servers..."
-    servers' <- mapM connectServer (ircServers C.config)
+    let newServers = filter (not . isConnected bot) (ircServers C.config)
+    newServers' <- mapM connectServer newServers
     putStrLn "Joining channels..."
-    mapM_ initServer servers'
+    mapM_ initServer newServers'
     putStrLn "Spawning threads..."
+    let bot'  = saveServersStates newServers' bot
+        Bot x = bot'
     chan <- newChan :: IO (Chan IrcLine)
-    mapM_ (forkIO . listener chan) servers'
-    state <- monitor chan bot
-    reboot modul' bot
+    mapM_ (forkIO . listener chan) (M.toList x)
+    bot'' <- monitor chan bot'
+    reboot modul' bot''
 
 -- | Bot main loop, monitors the threads states and handle reboot
 monitor :: (Chan IrcLine) -> Bot -> IO Bot

@@ -2,8 +2,10 @@ module Hsbot.Core
     ( Bot(..)
     , Config(..)
     , IrcServer(..)
+    , isConnected
     , newbot
     , sendstr
+    , saveServersStates
     ) where
 
 import qualified Data.Map as M
@@ -30,7 +32,7 @@ data IrcServer = IrcServer
     , password       :: String   -- the hsbot's password, optional
     , realname       :: String   -- the hsbot's real name, optional
     , administrators :: [String] -- bot admins nicknames
-    } deriving (Eq, Show)
+    } deriving (Eq, Ord, Show)
 
 -- | Returns a new, empty bot
 newbot :: Bot
@@ -39,4 +41,16 @@ newbot = Bot (M.empty)
 -- | Send a string over handle
 sendstr :: Handle -> String -> IO ()
 sendstr handle str = hPrintf handle "%s\r\n" str
+
+-- | Are we already connected to this server?
+isConnected :: Bot -> IrcServer -> Bool
+isConnected (Bot bot) ircServer = ircServer `M.member` bot
+
+saveServerState :: Handle -> IrcServer -> Bot -> Bot
+saveServerState handle ircServer x@(Bot bot) = 
+    if ircServer `M.member` bot then x
+     else (Bot $ M.insert ircServer handle bot)
+
+saveServersStates :: [(IrcServer,Handle)] -> Bot -> Bot
+saveServersStates liste bot = foldr (\(ircServer,handle) bot' -> saveServerState handle ircServer bot') bot liste
 
