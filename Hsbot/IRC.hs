@@ -5,15 +5,18 @@ module Hsbot.IRC
     , parseIrcMsg
     , ping
     , pong
+    , sendPrivmsg
     )where
 
 import Control.Monad
 import Data.List(isPrefixOf)
+import Data.Maybe
 import Network
 import qualified Network.IRC as IRC
 import System.IO
 
 import Hsbot.Core
+import Hsbot.IRCParser
 
 type User    = String
 type Channel = String
@@ -21,7 +24,7 @@ type Command = String
 type Args    = [String]
 
 -- | An IRC line
-data IrcLine = Str String                 -- a regular string
+data IrcLine = Privmsg (String, [String])   -- statement (chan, sentence...)
                | Quit (IrcServer, Handle)   -- a quit message from a server
                | Join (IrcServer, Channel)  -- joined a channel
                | Part (IrcServer, Channel)  -- parted the channel
@@ -31,8 +34,21 @@ data IrcLine = Str String                 -- a regular string
     deriving (Eq,Show)
 
 -- | Parses an IrcInput
-parseIrcMsg :: String -> IrcInput
-parseIrcMsg str = (Cmd "user" "channel" (str, Just "args"))
+parseIrcMsg :: String -> IrcLine
+parseIrcMsg str = 
+    case (ircParser str) of
+        Left err -> Nil
+        Right x  -> eval x
+    where
+        eval :: IrcMsg -> IrcLine
+        eval x@(IrcMsg statement cmd stuff)
+            | cmd == "PING" = Ping $ head stuff
+            | cmd == "PRIVMSG" =
+		    case statement of
+		        Nothing -> Nil
+			Just statement' -> if stuff!!1 == "reboot" then Reboot
+                                              else  Privmsg $ (statement', stuff)
+            | otherwise = Nil
 
 -- | Connects to a server
 connectServer :: IrcServer -> IO (IrcServer, Handle)
@@ -60,4 +76,7 @@ ping = isPrefixOf "PING :"
 -- | Send a pong message given a ping message
 pong :: Handle -> String -> IO ()
 pong handle str = sendstr handle $ "PONG " ++ (drop 5 str)
+
+sendPrivmsg :: (IrcServer, Handle) -> [String] -> IO ()
+sendPrivmsg (server, handle) stuff' = sendstr handle (IRC.encode $ IRC.privmsg (head stuff') (unwords . tail $ stuff'))
 
