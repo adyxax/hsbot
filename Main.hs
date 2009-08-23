@@ -1,4 +1,5 @@
 module Main where
+
 import System.Exit
 import System.Plugins
 
@@ -27,8 +28,8 @@ main = do
     imain modul' reboot
 
 -- | Dynamic rebooting function
-reboot :: Module -> a -> IO ()
-reboot modul' state = do
+reboot :: Module -> a -> b -> IO ()
+reboot modul' state chan = do
     mkstat <- makeAll "Hsbot.hs" ghcargs
     case mkstat of
         MakeSuccess _ _ -> do
@@ -37,7 +38,7 @@ reboot modul' state = do
             case ldstat of
                 LoadSuccess modul'' imain' -> do
                     putStrLn "REBOOT: Successful recompilation & reloading, rebooting..."
-                    imain' modul'' reboot state
+                    imain' modul'' reboot state chan
                 LoadFailure e -> fatality e
         MakeFailure e -> fatality e
     where

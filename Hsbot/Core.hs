@@ -49,8 +49,8 @@ isConnected (Bot bot) ircServer = ircServer `M.member` bot
 saveServerState :: Handle -> IrcServer -> Bot -> Bot
 saveServerState handle ircServer x@(Bot bot) = 
     if ircServer `M.member` bot then x
-     else (Bot $ M.insert ircServer handle bot)
+      else (Bot $ M.insert ircServer handle bot)
 
-saveServersStates :: [(IrcServer,Handle)] -> Bot -> Bot
-saveServersStates liste bot = foldr (\(ircServer,handle) bot' -> saveServerState handle ircServer bot') bot liste
+saveServersStates :: [(IrcServer, Handle)] -> Bot -> Bot
+saveServersStates liste bot = foldl (\bot' (ircServer, handle) -> saveServerState handle ircServer bot') bot liste
 

@@ -14,28 +14,29 @@ import qualified Config as C
 import Hsbot.Core
 import Hsbot.IRC
 
-type Reboot = (Module -> Bot -> IO ())
+type Reboot = (Module -> Bot -> (Chan IrcLine) -> IO ())
 
 -- | Bot's first main entry point
 imain :: Module -> Reboot -> IO ()
-imain modul' reboot = imain' modul' reboot newbot
+imain modul' reboot = do
+    chan <- newChan :: IO (Chan IrcLine)
+    imain' modul' reboot newbot chan
 
 -- | Bot's main entry point
-imain' :: Module -> Reboot -> Bot -> IO ()
-imain' modul' reboot bot = do
+imain' :: Module -> Reboot -> Bot -> (Chan IrcLine) -> IO ()
+imain' modul' reboot bot chan = do
     -- The chan passing to reboot (or another way to keep it) is still missing
-    putStrLn "Connecting servers..."
     let newServers = filter (not . isConnected bot) (ircServers C.config)
+    putStrLn $ "Connecting servers : " ++ show (map address newServers)
     newServers' <- mapM connectServer newServers
-    putStrLn "Joining channels..."
+    putStrLn $ "Joining channels : " ++ show (map channels newServers) 
     mapM_ initServer newServers'
     putStrLn "Spawning threads..."
     let bot'  = saveServersStates newServers' bot
         Bot x = bot'
-    chan <- newChan :: IO (Chan IrcLine)
-    mapM_ (forkIO . listener chan) (M.toList x)
+    mapM_ (forkIO . listener chan) newServers' -- (M.toList x)
     bot'' <- monitor chan bot'
-    reboot modul' bot''
+    reboot modul' bot'' chan
 
 -- | Bot main loop, monitors the threads states and handle reboot
 monitor :: (Chan IrcLine) -> Bot -> IO Bot
