@@ -14,9 +14,9 @@ defaultPlugins = [ "Ping", "Quote" ]
 -- | User server
 kro :: IrcServer
 kro = IrcServer
-    { address        = "kro.corp"
-    , port           = PortNumber 6667
-    , channels       = ["#shbot"]
+    { serverAddress  = "perseus"
+    , serverPort     = PortNumber 6667
+    , joinChannels   = ["#shbot"]
     , nickname       = "hsbot"
     , password       = ""
     , realname       = "The One True bot, with it's haskell soul."

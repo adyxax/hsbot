@@ -29,9 +29,9 @@ data Config = Config
 
 -- | An IRC server
 data IrcServer = IrcServer
-    { address        :: String   -- the server's address
-    , port           :: PortID   -- the server's port
-    , channels       :: [String] -- a list of channels to join
+    { serverAddress  :: String   -- the server's address
+    , serverPort     :: PortID   -- the server's port
+    , joinChannels   :: [String] -- a list of channels to join
     , nickname       :: String   -- the hsbot's nickname
     , password       :: String   -- the hsbot's password, optional
     , realname       :: String   -- the hsbot's real name, optional

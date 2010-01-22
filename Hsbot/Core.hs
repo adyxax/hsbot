@@ -20,10 +20,10 @@ import Hsbot.Utils
 -- Connect to the server and return the initial bot state
 connectServer :: IrcServer -> IO Bot
 connectServer server = do
-    let name  = address server
+    let name  = serverAddress server
     starttime <- getClockTime
     putStr $ "Connecting to " ++ name ++ "... "
-    handle <- connectTo name $ port server
+    handle <- connectTo name $ serverPort server
     hSetBuffering handle NoBuffering
     putStrLn "done."
     putStr $ "Opening server communication channel... "

@@ -19,7 +19,7 @@ initServer = do
     sendstr $ serializeIrcMsg $ IrcMsg Nothing "USER" [(nickname server), "0", "*", (realname server)]
     when (not . null $ password server) $ do
         sendstr $ serializeIrcMsg $ IrcMsg Nothing "PRIVMSG" ["nickserv", "identify", (password server)]
-    mapM_ joinChan (channels server)
+    mapM_ joinChan (joinChannels server)
 
 -- | Run a server
 runServer :: IrcBot ()
