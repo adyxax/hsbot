@@ -1,5 +1,6 @@
 module Hsbot.IRCPlugin
     ( readMsg
+    , sendCommand
     , sendRegisterCommand
     , sendUnregisterCommand
     , writeMsg

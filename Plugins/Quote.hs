@@ -28,8 +28,9 @@ type QuoteBot a = StateT QuoteDB IO a
 mainQuote :: Chan BotMsg -> Chan BotMsg -> IO ()
 mainQuote serverChan chan = do
     let plugin = PluginInstance "Quote" serverChan chan
-    (runStateT run plugin) `catch` (const $ return ((), plugin))
-    return ()
+    plugin' <- (execStateT run plugin) `catch` (const $ return plugin)
+    putStrLn "graou"
+    evalStateT stop plugin'
 
 -- | The IrcPlugin monad main function
 run :: IrcPlugin ()
@@ -37,6 +38,9 @@ run = do
     -- TODO : init quote handling (sqlite + structure to handle temporary stuff)
     sendRegisterCommand "quote"
     runPlugin
+
+stop :: IrcPlugin ()
+stop = do
     sendUnregisterCommand "quote"
     -- TODO : send cancel messages for all temporary stuff
 

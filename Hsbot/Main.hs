@@ -15,8 +15,8 @@ import Hsbot.Types
 imain :: IO ()
 imain = do
     bot <- connectServer $ ircServer config
-    (runStateT run bot) `catch` (const $ return ((), bot))
-    disconnectServer bot
+    bot' <- (execStateT run bot) `catch` (const $ return bot)
+    evalStateT disconnectServer bot'
 
 -- | The Bot monad main function
 run :: IrcBot ()

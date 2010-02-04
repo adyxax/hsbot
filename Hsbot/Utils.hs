@@ -34,9 +34,9 @@ traceM :: String -> IrcBot ()
 traceM msg = liftIO $ trace msg
 
 -- | Logs an error message
-error :: String -> IO ()
-error msg = trace $ inColor msg [31]
+traceRed :: String -> IO ()
+traceRed msg = trace $ inColor msg [31]
 
-errorM :: String -> a ()
-error msg = liftIO $ error msg
+errorM :: String -> IrcBot ()
+errorM msg = liftIO $ traceRed msg
 

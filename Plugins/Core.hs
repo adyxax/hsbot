@@ -3,6 +3,7 @@ module Plugins.Core
     ) where
 
 import Control.Concurrent.Chan
+import Control.Monad.State
 
 import Hsbot.IRCPlugin
 import Hsbot.Types
@@ -18,9 +19,9 @@ mainCore serverChan chan = do
 -- | The IrcPlugin monad main function
 run :: IrcPlugin ()
 run = do
-    mapM_ sendRegisterCommand ["load", "unload"]
+    mapM_ sendRegisterCommand ["load", "reload", "unload"]
     runPlugin
-    mapM_ sendUnregisterCommand ["load", "unload"]
+    mapM_ sendUnregisterCommand ["load", "reload", "unload"]
 
 runPlugin :: IrcPlugin ()
 runPlugin = forever $ do
@@ -33,6 +34,7 @@ runPlugin = forever $ do
             "RUN" -> let stuff = words $ intCmdMsg intCmd
                      in case head stuff of
                             "load"   -> loadPlugin $ tail stuff
+                            "reload" -> reloadPlugin $ tail stuff
                             "unload" -> unloadPlugin $ tail stuff
                             _      -> lift $ trace $ show intCmd -- TODO : help message
             _     -> lift $ trace $ show intCmd
@@ -42,6 +44,10 @@ runPlugin = forever $ do
 -- | The load command
 loadPlugin :: [String] -> IrcPlugin ()
 loadPlugin pluginNames = mapM_ (sendCommand "LOAD" "CORE") pluginNames
+
+-- | The reload command
+reloadPlugin :: [String] -> IrcPlugin ()
+reloadPlugin pluginNames = mapM_ (sendCommand "RELOAD" "CORE") pluginNames
 
 -- | The unload command
 unloadPlugin :: [String] -> IrcPlugin ()

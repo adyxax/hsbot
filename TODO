@@ -1,7 +1,8 @@
 :julien!~julien@ogu21.corp PRIVMSG #shbot :@quote graou snif
 
+* fix unload plugins
+* list plugins
 * discard all trace with a color param and replace those with functions info/warn/error/debug
-* unload plugin
 
 * clean the plugin module
 * kill threads

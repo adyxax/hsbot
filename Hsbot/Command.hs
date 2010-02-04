@@ -67,7 +67,9 @@ processInternalCommand (InternalCmd intCmd) = do
     plugins <- gets botPlugins
     if intCmdTo intCmd == "CORE"
       then processCoreCommand intCmd
-      else sendToPlugin (InternalCmd intCmd) $ fromMaybe [] (M.lookup plugins (intCmdTo intCmd))
+      else case M.lookup (intCmdTo intCmd) plugins of
+          Just plugin -> sendToPlugin (InternalCmd intCmd) plugin
+          Nothing     -> errorM $ "Invalid destination in message : " ++ (show intCmd)
 processInternalCommand _ = return ()
 
 -- | Processes a core command
@@ -76,8 +78,11 @@ processCoreCommand intCmd = do
     let command' = intCmdCmd intCmd
     case command' of
         "LOAD"       -> loadPlugin $ intCmdMsg intCmd
+        "RELOAD"     -> reloadPlugin $ intCmdMsg intCmd
         "UNLOAD"     -> unloadPlugin $ intCmdMsg intCmd
         "REGISTER"   -> registerCommand (intCmdMsg intCmd) (intCmdFrom intCmd)
         "UNREGISTER" -> unregisterCommand (intCmdMsg intCmd) (intCmdFrom intCmd)
         _            -> traceM $ inColor ("Invalid command : " ++ (show intCmd)) [31]
+    bot' <- get
+    traceM $ show bot'
 

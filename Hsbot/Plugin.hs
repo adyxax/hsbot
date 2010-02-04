@@ -1,10 +1,13 @@
 module Hsbot.Plugin
     ( loadPlugin
     , sendToPlugin
+    , reloadPlugin
+    , unloadPlugin
     ) where
 
 import Control.Concurrent
 import Control.Concurrent.Chan
+import Control.Exception.Extensible
 import Control.Monad.State
 import qualified Data.Map as M
 import System.IO
@@ -53,6 +56,12 @@ effectivelyLoadPlugin name serverChan = do
             return Nothing
     return plugin
 
+-- | Reloads a plugin
+reloadPlugin :: String -> IrcBot ()
+reloadPlugin name = do
+    unloadPlugin name
+    loadPlugin name
+
 -- | Unloads a plugin
 unloadPlugin :: String -> IrcBot ()
 unloadPlugin name = do
@@ -61,16 +70,11 @@ unloadPlugin name = do
     case M.lookup name oldPlugins of
         Just plugin -> do
             let newPlugins = M.delete name oldPlugins
-            liftIO $ killPlugin plugin -- TODO : forkIO to get this asynchronous and non blocking
-            -- or let's see if closing one's chan kills him.
-            unloadAll $ pluginModule $ M.lookup name oldPlugins
+            liftIO $ throwTo (pluginThreadId plugin) UserInterrupt -- TODO : fix this!
+            --sendToPlugin (InternalCmd $ IntCmd "STOP" "CORE" name "") plugin
+            liftIO $ unloadAll $ pluginModule plugin
             put $ bot { botPlugins = newPlugins }
         Nothing -> return ()
-
--- | stop a plugin
-killPlugin :: Plugin -> IO ()
-killPlugin plugin = do
-            -- TODO : send stop, sleep and kill thread (if necessary) and remove its commands
 
 -- | Sends a msg to a plugin
 sendToPlugin :: BotMsg -> Plugin -> IrcBot ()

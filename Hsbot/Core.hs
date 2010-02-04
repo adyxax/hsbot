@@ -13,6 +13,7 @@ import System.IO
 import System.Time (getClockTime)
 
 import Hsbot.IRCParser
+import Hsbot.Plugin
 import Hsbot.Types
 import Hsbot.Utils
 
@@ -32,11 +33,12 @@ connectServer server = do
     return $ Bot server starttime handle [] M.empty chan threadId M.empty
 
 -- | Disconnect from the server
-disconnectServer :: Bot -> IO ()    -- IO Bot ?
-disconnectServer bot = do
-    killThread $ readerThreadId bot
-    mapM_ (killThread . pluginThreadId . snd) (M.toList $ botPlugins bot)
-    hClose $ botHandle bot
+disconnectServer :: IrcBot ()
+disconnectServer = do
+    bot <- get
+    liftIO $ killThread $ readerThreadId bot
+    mapM_ unloadPlugin (M.keys $ botPlugins bot)
+    liftIO $ hClose $ botHandle bot
     return ()
 
 -- | Socket reading loop
