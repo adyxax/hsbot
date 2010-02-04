@@ -1,7 +1,7 @@
-* implement InternalCommands "register command"
-* unregister command, add it to internal commands
+* implement InternalCommands "register command" and "unregister command"
 * kill threads
 * unload plugin
+* part chan
 
 * restore \r in IRCParser
 

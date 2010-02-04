@@ -1,9 +1,11 @@
 module Hsbot.Command
     ( dispatchCommand
     , registerCommand
+    , unregisterCommand
     ) where
 
 import Control.Monad.State
+import qualified Data.List as L
 import qualified Data.Map as M
 import Data.Maybe
 
@@ -39,14 +41,23 @@ registerCommand cmd pluginName' = do
     bot     <- get
     cmds    <- gets botCommands
     exists <- pluginExists pluginName'
+    -- TODO : improve this crap and remove at least one if!
     if exists
       then
         let cmds' = if cmd `M.member` cmds
                       then cmds
                       else M.singleton cmd []
+            -- TODO : remove duplicates ?
             newCmds = M.adjust (++ [pluginName']) cmd cmds'
         in put $ bot { botCommands = newCmds }
       else
         traceM $ inColor ("Couldn't register command \"" ++ cmd ++ "\" for plugin \""
                           ++ pluginName' ++ "\" : plugin does not exists") [31]
+
+unregisterCommand :: String -> String -> IrcBot ()
+unregisterCommand cmd pluginName' = do
+    bot    <- get
+    cmds   <- gets botCommands
+    let newCmds = M.adjust (L.delete pluginName') cmd cmds
+    put $ bot { botCommands = newCmds }
 
