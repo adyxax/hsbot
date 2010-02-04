@@ -5,7 +5,7 @@ module Config
 
 import Network
 
-import Hsbot.Core
+import Hsbot.Types
 
 -- | Imported plugins goes there
 defaultPlugins :: [String]

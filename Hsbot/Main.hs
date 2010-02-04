@@ -9,6 +9,7 @@ import Config
 import Hsbot.Core
 import Hsbot.IRC
 import Hsbot.Plugin
+import Hsbot.Types
 
 -- | Bot's main entry point
 imain :: IO ()

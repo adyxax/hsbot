@@ -1,13 +1,13 @@
 module Hsbot.IRCParser
     ( ParseError
     , parseIrcMsg
+    , serializeIrcMsg
     ) where
 
 import Control.Monad.Identity
--- import Data.List
 import Text.Parsec
 
-import Hsbot.Core
+import Hsbot.Types
 
 -- | Parses an IrcInput
 parseIrcMsg :: String -> Either ParseError IrcMsg
@@ -37,4 +37,15 @@ pLongParam = char ':' >> (many1 (noneOf "\r"))
 
 pShortParam :: ParsecT String u Identity [Char]
 pShortParam = many1 (noneOf " \r")
+
+-- |Serialize an IRC message to a string.
+serializeIrcMsg :: IrcMsg -> String
+serializeIrcMsg (IrcMsg pfx cmd params) = pfxStr ++ cmd ++ paramStr
+    where pfxStr = case pfx of
+                        Nothing  -> ""
+                        Just pfx' -> ":" ++ pfx' ++ " "
+          paramStr = concat (map paramToStr (init params)
+                             ++ [lastParamToStr (last params)])
+          paramToStr p = " " ++ p
+          lastParamToStr p = " :" ++ p
 
