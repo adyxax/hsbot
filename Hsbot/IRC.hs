@@ -7,6 +7,7 @@ import Control.Concurrent.Chan
 import Control.Monad.State
 import qualified Data.Map as M
 
+import Hsbot.Command
 import Hsbot.IRCParser
 import Hsbot.Plugin
 import Hsbot.Types
@@ -30,12 +31,13 @@ runServer = do
     let input = readChan chan
     msg <- liftIO input
     case msg of
-        InputMsg inputMsg ->
+        InputMsg inputMsg   -> do
+            dispatchCommand $ InputMsg inputMsg
             mapM_ (sendToPlugin (InputMsg inputMsg) . snd) (M.toList plugins)
         OutputMsg outputMsg ->
             sendstr (serializeIrcMsg outputMsg)
-        InternalCmd internalCmd ->
-            traceM "TODO"
+        InternalCmd _       ->
+            traceM "TODO internal command"
     runServer
 
 -- | Joins a chan

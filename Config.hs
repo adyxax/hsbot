@@ -26,7 +26,7 @@ kro = IrcServer
 -- | User configuration
 config :: Config
 config = Config
-    { commandPrefixes = ['@']
-    , ircServer       = kro
+    { commandPrefix = '@'
+    , ircServer     = kro
     }
 

@@ -1,5 +1,6 @@
 module Hsbot
     ( module Config
+    , module Hsbot.Command
     , module Hsbot.Core
     , module Hsbot.IRC
     , module Hsbot.IRCParser
@@ -10,6 +11,7 @@ module Hsbot
     ) where
 
 import Config
+import Hsbot.Command
 import Hsbot.Core
 import Hsbot.IRC
 import Hsbot.IRCParser

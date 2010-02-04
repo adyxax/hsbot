@@ -22,10 +22,10 @@ import System.Time (ClockTime)
 -- | TODO : a monad for a channel, and a monad for a server, all together driven by a Bot?
 
 -- | Configuration data type
-data Config = Config {
-   commandPrefixes :: String,   -- command prefixes, for example @[\'>\',\'@\',\'?\']@
-   ircServer       :: IrcServer -- list of 'Server's to connect to
-} deriving (Show)
+data Config = Config
+    { commandPrefix :: Char      -- command prefixes, for example @[\'>\',\'@\',\'?\']@
+    , ircServer     :: IrcServer -- list of 'Server's to connect to
+    } deriving (Show)
 
 -- | An IRC server
 data IrcServer = IrcServer
@@ -76,18 +76,18 @@ data Channel = Channel
     , channelAdmins :: [String] -- the bot administrators
     } deriving (Show)
 
--- | A Bot command
-data IntCmd = IntCmd
-    { intCmd       :: String   -- the bot's internal command
-    , intCmdParams :: [String] -- the parameters
-    } deriving (Show)
-
--- |An IRC message.
+-- | An IRC message
 data IrcMsg = IrcMsg
     { prefix     :: Maybe String -- the message prefix
     , command    :: String       -- the message command
     , parameters :: [String]     -- the message parameters
     } deriving (Show)
+
+-- | An internal command
+data IntCmd = IntCmd
+    { intCmd :: String -- the internal command
+    , intMsg :: IrcMsg -- the IrcMsg associated with the command
+    }
 
 -- | A plugin definition
 data Plugin = Plugin
