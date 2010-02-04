@@ -1,17 +1,22 @@
 module Config
     ( config
+    , defaultPlugins
     ) where
+
+import Network
 
 import Hsbot.Core
 
 -- | Imported plugins goes there
+defaultPlugins :: [String]
+defaultPlugins = [ "Ping" ]
 
 -- | User server
 kro :: IrcServer
 kro = IrcServer
     { address        = "kro.corp"
-    , port           = 6667
-    , channels       = ["#geek", "#shbot"]
+    , port           = PortNumber 6667
+    , channels       = ["#shbot"]
     , nickname       = "hsbot"
     , password       = ""
     , realname       = "The One True bot, with it's haskell soul."
@@ -22,6 +27,6 @@ kro = IrcServer
 config :: Config
 config = Config
     { commandPrefixes = ['@']
-    , ircServers         = [kro]
+    , ircServer       = kro
     }
 
