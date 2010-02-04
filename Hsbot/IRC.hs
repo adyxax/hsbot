@@ -5,6 +5,7 @@ module Hsbot.IRC
 
 import Control.Concurrent.Chan
 import Control.Monad.State
+import qualified Data.Map as M
 
 import Hsbot.IRCParser
 import Hsbot.Plugin
@@ -30,7 +31,7 @@ runServer = do
     msg <- liftIO input
     case msg of
         InputMsg inputMsg ->
-            mapM_ (sendToPlugin $ InputMsg inputMsg) plugins
+            mapM_ (sendToPlugin (InputMsg inputMsg) . snd) (M.toList plugins)
         OutputMsg outputMsg ->
             sendstr (serializeIrcMsg outputMsg)
         InternalCmd internalCmd ->

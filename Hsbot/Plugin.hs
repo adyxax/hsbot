@@ -1,27 +1,34 @@
 module Hsbot.Plugin
     ( loadPlugin
+    , pluginExists
     , sendToPlugin
     ) where
 
 import Control.Concurrent
 import Control.Concurrent.Chan
 import Control.Monad.State
+import qualified Data.Map as M
 import System.IO
 import System.Plugins
 
 import Hsbot.Types
 import Hsbot.Utils
 
+-- TODO : unload plugin, reload plugin, list plugins, etc
+
 -- | Loads a plugin into an ircBot
 loadPlugin :: String -> IrcBot ()
 loadPlugin name = do
     bot <- get
-    plugin <- liftIO $ effectivelyLoadPlugin name (botChannel bot)
-    case plugin of
-        Just plugin' -> do
-            let oldPlugins = botPlugins bot
-            put $ bot { botPlugins = plugin' : oldPlugins } -- TODO : clean with a correct append
-        Nothing -> return ()
+    let oldPlugins = botPlugins bot
+    if name `M.member` oldPlugins
+      then traceM $ inColor ("Can't load plugin \"" ++ name ++ "\", this identifier has already been registered.") [31]
+      else do
+        plugin <- liftIO $ effectivelyLoadPlugin name (botChannel bot)
+        case plugin of
+            Just plugin' -> do
+                put $ bot { botPlugins = M.insert name plugin' oldPlugins}
+            Nothing -> return ()
 
 -- | Effectively try to load a plugin
 effectivelyLoadPlugin :: String -> Chan BotMsg -> IO (Maybe Plugin)
@@ -53,4 +60,10 @@ sendToPlugin :: BotMsg -> Plugin -> IrcBot ()
 sendToPlugin msg plugin = do
     let chan = pluginChannel plugin
     liftIO $ writeChan chan msg
+
+-- | Tells if a plugin is loaded or not
+pluginExists :: String -> IrcBot Bool
+pluginExists name = do
+    plugins <- gets botPlugins
+    return $ name `M.member` plugins
 
