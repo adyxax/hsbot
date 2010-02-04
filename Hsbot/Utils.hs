@@ -1,5 +1,7 @@
 module Hsbot.Utils
-    ( inColor
+    ( error
+    , errorM
+    , inColor
     , sendstr
     , trace
     , traceM
@@ -29,10 +31,12 @@ trace msg = putStrLn msg
 
 -- | Log a message string
 traceM :: String -> IrcBot ()
-traceM msg = liftIO $ putStrLn msg
+traceM msg = liftIO $ trace msg
 
------------------
--- | Helpers | --
------------------
--- sendRegister
+-- | Logs an error message
+error :: String -> IO ()
+error msg = trace $ inColor msg [31]
+
+errorM :: String -> a ()
+error msg = liftIO $ error msg
 

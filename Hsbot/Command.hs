@@ -36,37 +36,48 @@ unregisterCommand cmd pluginName' = do
     let newCmds = M.adjust (L.delete pluginName') cmd cmds
     put $ bot { botCommands = newCmds }
 
---
--- TODO Clean this crap
---
+-- | Dispatches an input message
 dispatchMessage :: BotMsg -> IrcBot ()
 dispatchMessage (InputMsg inputMsg) = do
     plugins <- gets botPlugins
     cmds    <- gets botCommands
-    case command inputMsg of
-        "PRIVMSG" ->  -- The first word matters as the command
-                     let msg = (parameters inputMsg) !! 1
-                         pfx = commandPrefix config
-                     in if (head msg) == pfx
-                          then
-                            let msg'        = tail msg -- all but the cmd prefix
-                                key         = head $ words msg'
-                                pluginNames = fromMaybe [] $ M.lookup key cmds
-                                plugins'    = fromMaybe [] $ mapM (flip M.lookup plugins) pluginNames
-                            in  mapM_ (sendToPlugin $ InternalCmd $ IntCmd ("runCommand " ++ key) inputMsg) plugins'
-                          else
-                            mapM_ (sendToPlugin (InputMsg inputMsg)) (M.elems plugins)
-        _        -> return ()
+    if isPluginCommand  --TODO : how to get rid of this if?
+      then
+        let key         = tail $ head $ words getMsgContent
+            pluginNames = fromMaybe [] $ M.lookup key cmds
+            plugins'    = fromMaybe [] $ mapM (flip M.lookup plugins) pluginNames
+        in mapM_ (sendRunCommand $ tail getMsgContent) plugins'
+      else
+        mapM_ (sendToPlugin (InputMsg inputMsg)) (M.elems plugins)
+  where
+    isPluginCommand :: Bool
+    isPluginCommand =
+        and [ command inputMsg == "PRIVMSG"
+            , (head getMsgContent) == (commandPrefix config) ]
+    sendRunCommand :: String -> Plugin -> IrcBot ()
+    sendRunCommand cmd plugin = do
+        sendToPlugin (InternalCmd $ IntCmd "RUN" "CORE" (pluginName plugin) cmd) plugin
+    getMsgContent :: String
+    getMsgContent = (parameters inputMsg) !! 1
 dispatchMessage _ = return ()
 
--- | Processes an internal command
+-- | Processes an internal command
 processInternalCommand :: BotMsg -> IrcBot ()
 processInternalCommand (InternalCmd intCmd) = do
-    let command' = words $ internalCommand intCmd
-    case command' !! 0 of
-        "REGISTER" -> case command' !! 1 of
-                        "COMMAND" -> registerCommand (command' !! 2) (command' !! 3)
-                        _         -> traceM $ inColor ("Invalid argument for the REGISTER command : " ++ (command' !! 2)) [31]
-        _          -> traceM $ inColor ("Invalid command : " ++ (command' !! 1)) [31]
+    plugins <- gets botPlugins
+    if intCmdTo intCmd == "CORE"
+      then processCoreCommand intCmd
+      else sendToPlugin (InternalCmd intCmd) $ fromMaybe [] (M.lookup plugins (intCmdTo intCmd))
 processInternalCommand _ = return ()
+
+-- | Processes a core command
+processCoreCommand :: IntCmd -> IrcBot ()
+processCoreCommand intCmd = do
+    let command' = intCmdCmd intCmd
+    case command' of
+        "LOAD"       -> loadPlugin $ intCmdMsg intCmd
+        "UNLOAD"     -> unloadPlugin $ intCmdMsg intCmd
+        "REGISTER"   -> registerCommand (intCmdMsg intCmd) (intCmdFrom intCmd)
+        "UNREGISTER" -> unregisterCommand (intCmdMsg intCmd) (intCmdFrom intCmd)
+        _            -> traceM $ inColor ("Invalid command : " ++ (show intCmd)) [31]
 

@@ -13,7 +13,7 @@ import System.Plugins
 import Hsbot.Types
 import Hsbot.Utils
 
--- TODO : unload plugin, reload plugin, list plugins, etc
+-- TODO : reload plugin, list plugins, etc
 
 -- | Loads a plugin into an ircBot
 loadPlugin :: String -> IrcBot ()
@@ -21,7 +21,7 @@ loadPlugin name = do
     bot <- get
     let oldPlugins = botPlugins bot
     if name `M.member` oldPlugins
-      then traceM $ inColor ("Can't load plugin \"" ++ name ++ "\", this identifier has already been registered.") [31]
+      then traceM $ inColor ("Can't load plugin \"" ++ name ++ "\", this identifier has already been registered.") [31] -- or a wait, smthg like that?
       else do
         plugin <- liftIO $ effectivelyLoadPlugin name (botChannel bot)
         case plugin of
@@ -33,7 +33,6 @@ loadPlugin name = do
 effectivelyLoadPlugin :: String -> Chan BotMsg -> IO (Maybe Plugin)
 effectivelyLoadPlugin name serverChan = do
     -- TODO : test if Plugins/ ++ name ++ .hs exists
-    --        Just load, do not compile if .o already present
     m <- liftIO $ makeAll ("Plugins/" ++ name ++ ".hs") []
     plugin <- case m of
         MakeSuccess _ _ -> do
@@ -53,6 +52,25 @@ effectivelyLoadPlugin name serverChan = do
             mapM_ putStrLn e
             return Nothing
     return plugin
+
+-- | Unloads a plugin
+unloadPlugin :: String -> IrcBot ()
+unloadPlugin name = do
+    bot <- get
+    let oldPlugins = botPlugins bot
+    case M.lookup name oldPlugins of
+        Just plugin -> do
+            let newPlugins = M.delete name oldPlugins
+            liftIO $ killPlugin plugin -- TODO : forkIO to get this asynchronous and non blocking
+            -- or let's see if closing one's chan kills him.
+            unloadAll $ pluginModule $ M.lookup name oldPlugins
+            put $ bot { botPlugins = newPlugins }
+        Nothing -> return ()
+
+-- | stop a plugin
+killPlugin :: Plugin -> IO ()
+killPlugin plugin = do
+            -- TODO : send stop, sleep and kill thread (if necessary) and remove its commands
 
 -- | Sends a msg to a plugin
 sendToPlugin :: BotMsg -> Plugin -> IrcBot ()

@@ -3,20 +3,27 @@ module Plugins.Ping
     ) where
 
 import Control.Concurrent.Chan
+import Control.Monad.State
 
+import Hsbot.IRCPlugin
 import Hsbot.Types
 
+-- | The plugin's main entry point
 mainPing :: Chan BotMsg -> Chan BotMsg -> IO ()
 mainPing serverChan chan = do
-    loop
-    where
-        loop = do
-            input <- readChan chan
-            eval input
-            loop
-        eval :: BotMsg -> IO ()
-        eval (InputMsg msg)
-            | (command msg) == "PING" = writeChan serverChan $ OutputMsg $ IrcMsg Nothing "PONG" (parameters msg)
-            | otherwise = return ()
-        eval _ = return ()
+    let plugin = PluginInstance "Ping" serverChan chan
+    (runStateT run plugin) `catch` (const $ return ((), plugin))
+    return ()
+
+-- | The IrcPlugin monad main function
+run :: IrcPlugin ()
+run = forever $ do
+    msg <- readMsg
+    eval msg
+  where
+    eval :: BotMsg -> IrcPlugin ()
+    eval (InputMsg msg)
+        | (command msg) == "PING" = writeMsg $ OutputMsg $ IrcMsg Nothing "PONG" (parameters msg)
+        | otherwise = return ()
+    eval _ = return ()
 

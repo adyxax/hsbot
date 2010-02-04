@@ -1,14 +1,17 @@
-* implement InternalCommands "register command" and "unregister command"
-* implement helpers for command parsing in plugins
-  we need a monad "Plugin" in order to manage the from and to message fields.
-* clean command module
-* clean plugin module
-* kill threads
+:julien!~julien@ogu21.corp PRIVMSG #shbot :@quote graou snif
+
+* discard all trace with a color param and replace those with functions info/warn/error/debug
 * unload plugin
+
+* clean the plugin module
+* kill threads
 * plugin reload
 * list modules command
 * part chan
-* add admin check for cmds
+
+* add admin checks for cmds
+* add register for casual conversations for plugins?
+* add a "I have stuff to save so don't kill me too hard" status for plugins
 
 * restore \r in IRCParser
 

@@ -9,12 +9,12 @@ import Hsbot.Types
 
 -- | Imported plugins goes there
 defaultPlugins :: [String]
-defaultPlugins = [ "Ping", "Quote" ]
+defaultPlugins = [ "Ping", "Core" ]
 
 -- | User server
-kro :: IrcServer
-kro = IrcServer
-    { serverAddress  = "perseus"
+localhost :: IrcServer
+localhost = IrcServer
+    { serverAddress  = "localhost"
     , serverPort     = PortNumber 6667
     , joinChannels   = ["#shbot"]
     , nickname       = "hsbot"
@@ -27,6 +27,6 @@ kro = IrcServer
 config :: Config
 config = Config
     { commandPrefix = '@'
-    , ircServer     = kro
+    , ircServer     = localhost
     }
 

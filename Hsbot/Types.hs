@@ -7,7 +7,9 @@ module Hsbot.Types
     , IrcServer(..)
     , IrcBot
     , IrcMsg(..)
+    , IrcPlugin
     , Plugin(..)
+    , PluginInstance(..)
     ) where
 
 import Control.Concurrent
@@ -23,7 +25,7 @@ import System.Time (ClockTime)
 
 -- | Configuration data type
 data Config = Config
-    { commandPrefix :: Char      -- command prefixes, for example @[\'>\',\'@\',\'?\']@
+    { commandPrefix :: Char      -- command prefixe, for example @[\'>\',\'@\',\'?\']@
     , ircServer     :: IrcServer -- list of 'Server's to connect to
     } deriving (Show)
 
@@ -67,7 +69,11 @@ data Bot = Bot
     }
 
 instance Show Bot where
-    show (Bot _ s h c p _ _ cmds) = (show s) ++ (show h) ++ (show c) ++ (show p) ++ (show cmds)
+    show (Bot _ s h c p _ _ cmds) =  "Start time : " ++ (show s) ++ "\n"
+                                  ++ "Handle     : " ++ (show h) ++ "\n"
+                                  ++ "Channels   : " ++ (show c) ++ "\n"
+                                  ++ "Plugins    : " ++ (show p) ++ "\n"
+                                  ++ "Commands   : " ++ (show cmds) ++ "\n"
 
 -- | A channel connection
 data Channel = Channel
@@ -84,13 +90,16 @@ data IrcMsg = IrcMsg
     } deriving (Show)
 
 -- | An internal command
---   TODO : make it with a FROM and a TO for plugins handling, and make it usefull threw the helpers.
 data IntCmd = IntCmd
-    { internalCommand    :: String -- the internal command
-    , internalCommandMsg :: IrcMsg -- the IrcMsg associated with the command
+    { intCmdCmd  :: String -- the internal command
+    , intCmdFrom :: String -- who issues it
+    , intCmdTo   :: String -- who it is destinated to
+    , intCmdMsg  :: String -- the IrcMsg associated with the command
     } deriving (Show)
 
--- | A plugin definition
+data BotMsg = InputMsg IrcMsg | OutputMsg IrcMsg | InternalCmd IntCmd
+
+-- | A plugin (core side)
 data Plugin = Plugin
     { pluginName     :: String      -- The plugin's name
     , pluginModule   :: Module      -- The plugin himself
@@ -101,5 +110,13 @@ data Plugin = Plugin
 instance Show Plugin where
     show (Plugin name _ _ _) = show name
 
-data BotMsg = InputMsg IrcMsg | OutputMsg IrcMsg | InternalCmd IntCmd
+-- | A IrcPlugin ("user" side)
+data PluginInstance = PluginInstance
+    { instanceName       :: String      -- The plugin's name
+    , instanceServerChan :: Chan BotMsg -- The server channel
+    , instanceChan       :: Chan BotMsg -- The plugin channel
+    }
+
+-- | The IrcPlugin monad
+type IrcPlugin a = StateT PluginInstance IO a
 

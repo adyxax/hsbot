@@ -1,7 +1,6 @@
 module Hsbot.Core
     ( connectServer
     , disconnectServer
-    , emptyMsg
     ) where
 
 import Control.Concurrent
@@ -30,7 +29,7 @@ connectServer server = do
     chan <- newChan :: IO (Chan BotMsg)
     threadId <- forkIO $ botReader handle chan
     putStrLn "done."
-    return (Bot server starttime handle [] M.empty chan threadId M.empty)
+    return $ Bot server starttime handle [] M.empty chan threadId M.empty
 
 -- | Disconnect from the server
 disconnectServer :: Bot -> IO ()    -- IO Bot ?
@@ -52,7 +51,4 @@ botReader handle chan = forever $ do
             writeChan chan (InputMsg msg')
         _ -> do
             return ()
-
-emptyMsg :: IrcMsg
-emptyMsg = IrcMsg Nothing "EMPTY" []
 
