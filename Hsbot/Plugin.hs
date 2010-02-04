@@ -1,6 +1,5 @@
 module Hsbot.Plugin
     ( loadPlugin
-    , pluginExists
     , sendToPlugin
     ) where
 
@@ -60,10 +59,4 @@ sendToPlugin :: BotMsg -> Plugin -> IrcBot ()
 sendToPlugin msg plugin = do
     let chan = pluginChannel plugin
     liftIO $ writeChan chan msg
-
--- | Tells if a plugin is loaded or not
-pluginExists :: String -> IrcBot Bool
-pluginExists name = do
-    plugins <- gets botPlugins
-    return $ name `M.member` plugins
 

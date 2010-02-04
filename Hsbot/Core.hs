@@ -1,6 +1,7 @@
 module Hsbot.Core
     ( connectServer
     , disconnectServer
+    , emptyMsg
     ) where
 
 import Control.Concurrent
@@ -51,4 +52,7 @@ botReader handle chan = forever $ do
             writeChan chan (InputMsg msg')
         _ -> do
             return ()
+
+emptyMsg :: IrcMsg
+emptyMsg = IrcMsg Nothing "EMPTY" []
 

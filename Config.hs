@@ -9,7 +9,7 @@ import Hsbot.Types
 
 -- | Imported plugins goes there
 defaultPlugins :: [String]
-defaultPlugins = [ "Ping" ]
+defaultPlugins = [ "Ping", "Quote" ]
 
 -- | User server
 kro :: IrcServer

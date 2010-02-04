@@ -1,7 +1,14 @@
 * implement InternalCommands "register command" and "unregister command"
+* implement helpers for command parsing in plugins
+  we need a monad "Plugin" in order to manage the from and to message fields.
+* clean command module
+* clean plugin module
 * kill threads
 * unload plugin
+* plugin reload
+* list modules command
 * part chan
+* add admin check for cmds
 
 * restore \r in IRCParser
 

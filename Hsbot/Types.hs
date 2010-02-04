@@ -84,10 +84,11 @@ data IrcMsg = IrcMsg
     } deriving (Show)
 
 -- | An internal command
+--   TODO : make it with a FROM and a TO for plugins handling, and make it usefull threw the helpers.
 data IntCmd = IntCmd
-    { intCmd :: String -- the internal command
-    , intMsg :: IrcMsg -- the IrcMsg associated with the command
-    }
+    { internalCommand    :: String -- the internal command
+    , internalCommandMsg :: IrcMsg -- the IrcMsg associated with the command
+    } deriving (Show)
 
 -- | A plugin definition
 data Plugin = Plugin

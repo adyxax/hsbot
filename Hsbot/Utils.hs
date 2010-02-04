@@ -31,3 +31,8 @@ trace msg = putStrLn msg
 traceM :: String -> IrcBot ()
 traceM msg = liftIO $ putStrLn msg
 
+-----------------
+-- | Helpers | --
+-----------------
+-- sendRegister
+
