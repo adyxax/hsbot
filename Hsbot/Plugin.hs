@@ -7,9 +7,10 @@ module Hsbot.Plugin
 
 import Control.Concurrent
 import Control.Concurrent.Chan
-import Control.Exception.Extensible
+import Control.Exception
 import Control.Monad.State
 import qualified Data.Map as M
+import Data.Maybe
 import System.IO
 import System.Plugins
 
@@ -36,7 +37,7 @@ loadPlugin name = do
 effectivelyLoadPlugin :: String -> Chan BotMsg -> IO (Maybe Plugin)
 effectivelyLoadPlugin name serverChan = do
     -- TODO : test if Plugins/ ++ name ++ .hs exists
-    m <- liftIO $ makeAll ("Plugins/" ++ name ++ ".hs") []
+    m <- liftIO $ makeAll ("Plugins/" ++ name ++ ".hs") ["-XScopedTypeVariables"]
     plugin <- case m of
         MakeSuccess _ _ -> do
             ldstat <- load_ ("Plugins/" ++ name ++ ".o") [".","Hsbot","Hsbot/Plugins"] ("main" ++ name)
@@ -57,6 +58,7 @@ effectivelyLoadPlugin name serverChan = do
     return plugin
 
 -- | Reloads a plugin
+-- TODO : make it a safe reload (compile before unloading)
 reloadPlugin :: String -> IrcBot ()
 reloadPlugin name = do
     unloadPlugin name
@@ -70,8 +72,7 @@ unloadPlugin name = do
     case M.lookup name oldPlugins of
         Just plugin -> do
             let newPlugins = M.delete name oldPlugins
-            liftIO $ throwTo (pluginThreadId plugin) UserInterrupt -- TODO : fix this!
-            --sendToPlugin (InternalCmd $ IntCmd "STOP" "CORE" name "") plugin
+            liftIO $ throwTo (pluginThreadId plugin) UserInterrupt
             liftIO $ unloadAll $ pluginModule plugin
             put $ bot { botPlugins = newPlugins }
         Nothing -> return ()

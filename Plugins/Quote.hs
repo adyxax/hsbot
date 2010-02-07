@@ -3,7 +3,9 @@ module Plugins.Quote
     ) where
 
 import Control.Concurrent.Chan
+import Control.Exception
 import Control.Monad.State
+import Prelude hiding (catch)
 import System.Time (ClockTime)
 
 import Hsbot.IRCPlugin
@@ -28,24 +30,13 @@ type QuoteBot a = StateT QuoteDB IO a
 mainQuote :: Chan BotMsg -> Chan BotMsg -> IO ()
 mainQuote serverChan chan = do
     let plugin = PluginInstance "Quote" serverChan chan
-    plugin' <- (execStateT run plugin) `catch` (const $ return plugin)
-    putStrLn "graou"
-    evalStateT stop plugin'
+    evalStateT (mapM_ sendRegisterCommand ["quote"]) plugin
+    (execStateT run plugin) `catch` (\(ex :: AsyncException) -> return plugin)
+    evalStateT (mapM_ sendUnregisterCommand ["quote"]) plugin
 
 -- | The IrcPlugin monad main function
 run :: IrcPlugin ()
-run = do
-    -- TODO : init quote handling (sqlite + structure to handle temporary stuff)
-    sendRegisterCommand "quote"
-    runPlugin
-
-stop :: IrcPlugin ()
-stop = do
-    sendUnregisterCommand "quote"
-    -- TODO : send cancel messages for all temporary stuff
-
-runPlugin :: IrcPlugin ()
-runPlugin = forever $ do
+run = forever $ do
     msg <- readMsg
     eval msg
   where

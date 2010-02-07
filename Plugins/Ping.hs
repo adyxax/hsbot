@@ -3,7 +3,9 @@ module Plugins.Ping
     ) where
 
 import Control.Concurrent.Chan
+import Control.Exception
 import Control.Monad.State
+import Prelude hiding (catch)
 
 import Hsbot.IRCPlugin
 import Hsbot.Types
@@ -12,7 +14,7 @@ import Hsbot.Types
 mainPing :: Chan BotMsg -> Chan BotMsg -> IO ()
 mainPing serverChan chan = do
     let plugin = PluginInstance "Ping" serverChan chan
-    (runStateT run plugin) `catch` (const $ return ((), plugin))
+    (execStateT run plugin) `catch` (\(ex :: AsyncException) -> return plugin)
     return ()
 
 -- | The IrcPlugin monad main function

@@ -1,5 +1,5 @@
 all:
-	ghc --make -Wall -O2 Main.hs -o hsbot
+	ghc --make -Wall -O2 Main.hs -o hsbot -XScopedTypeVariables
 
 clean:
 	- rm hsbot

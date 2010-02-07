@@ -3,7 +3,9 @@ module Plugins.Core
     ) where
 
 import Control.Concurrent.Chan
+import Control.Exception
 import Control.Monad.State
+import Prelude hiding (catch)
 
 import Hsbot.IRCPlugin
 import Hsbot.Types
@@ -13,18 +15,13 @@ import Hsbot.Utils
 mainCore :: Chan BotMsg -> Chan BotMsg -> IO ()
 mainCore serverChan chan = do
     let plugin = PluginInstance "Core" serverChan chan
-    (runStateT run plugin) `catch` (const $ return ((), plugin))
-    return ()
+    evalStateT (mapM_ sendRegisterCommand ["list", "load", "reload", "unload"]) plugin
+    (execStateT run plugin) `catch` (\(ex :: AsyncException) -> return plugin)
+    evalStateT (mapM_ sendUnregisterCommand ["list", "load", "reload", "unload"]) plugin
 
 -- | The IrcPlugin monad main function
 run :: IrcPlugin ()
-run = do
-    mapM_ sendRegisterCommand ["load", "reload", "unload"]
-    runPlugin
-    mapM_ sendUnregisterCommand ["load", "reload", "unload"]
-
-runPlugin :: IrcPlugin ()
-runPlugin = forever $ do
+run = forever $ do
     msg <- readMsg
     eval msg
   where
