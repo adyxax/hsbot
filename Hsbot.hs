@@ -9,6 +9,9 @@ module Hsbot
     , module Hsbot.Plugin
     , module Hsbot.Types
     , module Hsbot.Utils
+    , module Plugins.Core
+    , module Plugins.Ping
+    , module Plugins.Quote
     ) where
 
 import Config
@@ -21,4 +24,7 @@ import Hsbot.Main
 import Hsbot.Plugin
 import Hsbot.Types
 import Hsbot.Utils
+import Plugins.Core
+import Plugins.Ping
+import Plugins.Quote
 

@@ -18,7 +18,6 @@ import Control.Monad.State
 import qualified Data.Map as M
 import Network
 import System.IO
-import System.Plugins
 import System.Time (ClockTime)
 
 -- | TODO : a monad for a channel, and a monad for a server, all together driven by a Bot?
@@ -102,13 +101,12 @@ data BotMsg = InputMsg IrcMsg | OutputMsg IrcMsg | InternalCmd IntCmd deriving (
 -- | A plugin (core side)
 data Plugin = Plugin
     { pluginName     :: String      -- The plugin's name
-    , pluginModule   :: Module      -- The plugin himself
     , pluginThreadId :: ThreadId    -- The plugin thread
     , pluginChannel  :: Chan BotMsg -- The plugin channel
     }
 
 instance Show Plugin where
-    show (Plugin name _ _ _) = show name
+    show (Plugin name _ _) = show name
 
 -- | A IrcPlugin ("user" side)
 data PluginInstance = PluginInstance

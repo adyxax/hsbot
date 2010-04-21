@@ -1,8 +1,8 @@
 :julien!~julien@ogu21.corp PRIVMSG #shbot :@quote graou snif
 
+* Add the IrcMsg as an optional parameter for an internal command
 * Solve the catching that never happen in main
 * throwto exception to main thread
-* list plugins
 * write a safe reload : try reload before unloading
 * discard all trace with a color param and replace those with functions info/warn/error/debug
 

@@ -77,12 +77,9 @@ processCoreCommand :: IntCmd -> IrcBot ()
 processCoreCommand intCmd = do
     let command' = intCmdCmd intCmd
     case command' of
-        "LOAD"       -> loadPlugin $ intCmdMsg intCmd
-        "RELOAD"     -> reloadPlugin $ intCmdMsg intCmd
+        "LOAD"       -> traceM $ inColor "hsbot has been compiled in static mode." [31]
         "UNLOAD"     -> unloadPlugin $ intCmdMsg intCmd
         "REGISTER"   -> registerCommand (intCmdMsg intCmd) (intCmdFrom intCmd)
         "UNREGISTER" -> unregisterCommand (intCmdMsg intCmd) (intCmdFrom intCmd)
         _            -> traceM $ inColor ("Invalid command : " ++ (show intCmd)) [31]
-    bot' <- get
-    traceM $ show bot'
 

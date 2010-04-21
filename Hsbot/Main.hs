@@ -13,6 +13,10 @@ import Hsbot.IRC
 import Hsbot.Plugin
 import Hsbot.Types
 
+import Plugins.Core(mainCore)
+import Plugins.Ping(mainPing)
+import Plugins.Quote(mainQuote)
+
 -- | Bot's main entry point
 imain :: IO ()
 imain = do
@@ -24,6 +28,8 @@ imain = do
 run :: IrcBot ()
 run = do
     initServer
-    mapM_ loadPlugin defaultPlugins
+    loadPlugin "Ping" mainPing
+    loadPlugin "Core" mainCore
+    loadPlugin "Quote" mainQuote
     runServer
 
