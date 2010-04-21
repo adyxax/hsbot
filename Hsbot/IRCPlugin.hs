@@ -28,7 +28,7 @@ sendCommand :: String -> String -> String -> IrcPlugin ()
 sendCommand cmd to params = do
     serverChan <- gets instanceServerChan
     from       <- gets instanceName
-    liftIO $ writeChan serverChan $ InternalCmd $ IntCmd cmd from to params
+    liftIO $ writeChan serverChan $ InternalCmd $ IntCmd cmd from to params Nothing
 
 sendRegisterCommand :: String -> IrcPlugin ()
 sendRegisterCommand cmd = sendCommand "REGISTER" "CORE" cmd

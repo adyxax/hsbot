@@ -56,7 +56,7 @@ dispatchMessage (InputMsg inputMsg) = do
             , (head getMsgContent) == (commandPrefix config) ]
     sendRunCommand :: String -> Plugin -> IrcBot ()
     sendRunCommand cmd plugin = do
-        sendToPlugin (InternalCmd $ IntCmd "RUN" "CORE" (pluginName plugin) cmd) plugin
+        sendToPlugin (InternalCmd $ IntCmd "RUN" "CORE" (pluginName plugin) cmd (Just inputMsg)) plugin
     getMsgContent :: String
     getMsgContent = unwords . tail $ parameters inputMsg
 dispatchMessage _ = return ()

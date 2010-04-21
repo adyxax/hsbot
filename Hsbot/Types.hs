@@ -90,10 +90,11 @@ data IrcMsg = IrcMsg
 
 -- | An internal command
 data IntCmd = IntCmd
-    { intCmdCmd  :: String -- the internal command
-    , intCmdFrom :: String -- who issues it
-    , intCmdTo   :: String -- who it is destinated to
-    , intCmdMsg  :: String -- the IrcMsg associated with the command
+    { intCmdCmd    :: String       -- the internal command
+    , intCmdFrom   :: String       -- who issues it
+    , intCmdTo     :: String       -- who it is destinated to
+    , intCmdMsg    :: String       -- the message to be transfered
+    , intCmdBotMsg :: Maybe IrcMsg -- An IrcMsg attached to the command
     } deriving (Show)
 
 data BotMsg = InputMsg IrcMsg | OutputMsg IrcMsg | InternalCmd IntCmd deriving (Show)
