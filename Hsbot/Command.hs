@@ -76,7 +76,9 @@ processInternalCommand _ = return ()
 processCoreCommand :: IntCmd -> IrcBot ()
 processCoreCommand intCmd = do
     let command' = intCmdCmd intCmd
+        originalRequest = intCmdBotMsg intCmd
     case command' of
+        "LIST"       -> listPlugins originalRequest (intCmdFrom intCmd)
         "LOAD"       -> traceM $ inColor "hsbot has been compiled in static mode." [31]
         "UNLOAD"     -> unloadPlugin $ intCmdMsg intCmd
         "REGISTER"   -> registerCommand (intCmdMsg intCmd) (intCmdFrom intCmd)

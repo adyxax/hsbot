@@ -1,5 +1,6 @@
 module Hsbot.Plugin
-    ( loadPlugin
+    ( listPlugins
+    , loadPlugin
     , sendToPlugin
     , unloadPlugin
     ) where
@@ -30,6 +31,15 @@ effectivelyLoadPlugin name entryPoint serverChan = do
     chan <- newChan :: IO (Chan BotMsg)
     threadId <- forkIO $ entryPoint serverChan chan
     return $ Plugin name threadId chan
+
+-- | Sends a list of loaded plugins
+listPlugins :: Maybe IrcMsg -> String -> IrcBot ()
+listPlugins originalRequest dest = do
+    plugins <- gets botPlugins
+    let listing = unwords $ M.keys plugins
+    case M.lookup dest plugins of
+        Just plugin -> sendToPlugin (InternalCmd $ IntCmd "ANSWER" "CORE" dest listing originalRequest) plugin
+        Nothing     -> return ()
 
 -- | Unloads a plugin
 unloadPlugin :: String -> IrcBot ()

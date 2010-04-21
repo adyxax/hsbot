@@ -18,8 +18,8 @@ pMsg = do
     pfx <- optionMaybe pPrefix
     cmd <- pCommand
     params <- many (char ' ' >> (pLongParam <|> pShortParam))
-    --char '\r'
-    eof
+    char '\r'
+    --eof
     return $ IrcMsg pfx cmd params
 
 pPrefix :: ParsecT String u Identity [Char]

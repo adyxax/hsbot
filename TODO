@@ -1,10 +1,7 @@
 :julien!~julien@ogu21.corp PRIVMSG #shbot :@quote graou snif
 
-* write a safe reload : try reload before unloading
-* discard all trace with a color param and replace those with functions info/warn/error/debug
-
+* Write the quote module
 * clean the plugin module
-* list modules command
 * part chan
 
 * add admin checks for cmds
@@ -13,6 +10,6 @@
 
 * Handle unix signals properly
 * Make the bot auto-reconnect (/!\ admin plugin!)
-
-* restore \r in IRCParser
+* discard all trace with a color param and replace those with functions info/warn/error/debug
+* write a safe reload : try reload before unloading
 

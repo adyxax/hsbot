@@ -5,6 +5,7 @@ module Plugins.Core
 import Control.Concurrent.Chan(Chan)
 import Control.Exception
 import Control.Monad.State
+import Data.Maybe(fromMaybe)
 import Prelude hiding (catch)
 
 import Hsbot.IRCPlugin
@@ -28,15 +29,26 @@ run = forever $ do
     eval :: BotMsg -> IrcPlugin ()
     eval (InternalCmd intCmd) = do
         case intCmdCmd intCmd of
-            "RUN" -> let stuff = words $ intCmdMsg intCmd
-                     in case head stuff of
+            "RUN"    -> let stuff = words $ intCmdMsg intCmd
+                            request = intCmdBotMsg intCmd
+                        in case head stuff of
+                            "list"   -> listPlugins request
                             "load"   -> loadPlugin $ tail stuff
                             "reload" -> reloadPlugin $ tail stuff
                             "unload" -> unloadPlugin $ tail stuff
                             _      -> lift $ trace $ show intCmd -- TODO : help message
-            _     -> lift $ trace $ show intCmd
-    eval (InputMsg msg) = return ()
+            "ANSWER" -> let stuff = intCmdMsg intCmd
+                            request = intCmdBotMsg intCmd
+                            chanOrigin = head $ parameters (fromMaybe (IrcMsg Nothing "ARGH" []) request)
+                        in writeMsg $ OutputMsg $ IrcMsg Nothing "PRIVMSG" [chanOrigin, "Loaded plugins : " ++ stuff]
+            _        -> lift $ trace $ show intCmd
+    eval (InputMsg _) = return ()
     eval _ = return ()
+
+-- | The list command
+listPlugins :: Maybe IrcMsg -> IrcPlugin ()
+listPlugins request = do
+    sendCommandWithRequest "LIST" "CORE" (unwords []) request
 
 -- | The load command
 loadPlugin :: [String] -> IrcPlugin ()

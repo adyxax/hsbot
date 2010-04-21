@@ -1,6 +1,7 @@
 module Hsbot.IRCPlugin
     ( readMsg
     , sendCommand
+    , sendCommandWithRequest
     , sendRegisterCommand
     , sendUnregisterCommand
     , writeMsg
@@ -25,10 +26,13 @@ writeMsg botMsg = do
 
 -- | Commands management
 sendCommand :: String -> String -> String -> IrcPlugin ()
-sendCommand cmd to params = do
+sendCommand cmd to params = sendCommandWithRequest cmd to params Nothing
+
+sendCommandWithRequest :: String -> String -> String -> Maybe IrcMsg -> IrcPlugin ()
+sendCommandWithRequest cmd to params originalRequest = do
     serverChan <- gets instanceServerChan
     from       <- gets instanceName
-    liftIO $ writeChan serverChan $ InternalCmd $ IntCmd cmd from to params Nothing
+    liftIO $ writeChan serverChan $ InternalCmd $ IntCmd cmd from to params originalRequest
 
 sendRegisterCommand :: String -> IrcPlugin ()
 sendRegisterCommand cmd = sendCommand "REGISTER" "CORE" cmd
