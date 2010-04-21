@@ -5,7 +5,7 @@ module Hsbot.Main
 import Control.Exception
 import Control.Monad.State
 import Prelude hiding (catch)
-import System.IO
+import System.IO()
 
 import Config
 import Hsbot.Core
@@ -17,8 +17,8 @@ import Hsbot.Types
 imain :: IO ()
 imain = do
     bot <- connectServer $ ircServer config
-    (execStateT run bot) `catch` (\(ex :: IOException) -> return bot)
-    evalStateT disconnectServer bot
+    bot' <- (execStateT run bot) `catch` (\(_ :: IOException) -> return bot)
+    evalStateT disconnectServer bot'
 
 -- | The Bot monad main function
 run :: IrcBot ()

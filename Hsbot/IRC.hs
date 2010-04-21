@@ -23,7 +23,7 @@ initServer = do
 
 -- | Run a server
 runServer :: IrcBot ()
-runServer = do
+runServer = forever $ do
     chan    <- gets botChannel
     let input = readChan chan
     msg <- liftIO input
@@ -31,7 +31,6 @@ runServer = do
         InputMsg inputMsg       -> dispatchMessage $ InputMsg inputMsg
         OutputMsg outputMsg     -> sendstr (serializeIrcMsg outputMsg)
         InternalCmd internalCmd -> processInternalCommand $ InternalCmd internalCmd
-    runServer
 
 -- | Joins a chan
 joinChan :: String -> IrcBot ()

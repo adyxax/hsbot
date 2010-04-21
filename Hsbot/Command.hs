@@ -58,7 +58,7 @@ dispatchMessage (InputMsg inputMsg) = do
     sendRunCommand cmd plugin = do
         sendToPlugin (InternalCmd $ IntCmd "RUN" "CORE" (pluginName plugin) cmd) plugin
     getMsgContent :: String
-    getMsgContent = (parameters inputMsg) !! 1
+    getMsgContent = unwords . tail $ parameters inputMsg
 dispatchMessage _ = return ()
 
 -- | Processes an internal command

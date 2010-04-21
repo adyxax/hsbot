@@ -2,7 +2,7 @@ module Plugins.Core
     ( mainCore
     ) where
 
-import Control.Concurrent.Chan
+import Control.Concurrent.Chan(Chan)
 import Control.Exception
 import Control.Monad.State
 import Prelude hiding (catch)
@@ -16,8 +16,8 @@ mainCore :: Chan BotMsg -> Chan BotMsg -> IO ()
 mainCore serverChan chan = do
     let plugin = PluginInstance "Core" serverChan chan
     evalStateT (mapM_ sendRegisterCommand ["list", "load", "reload", "unload"]) plugin
-    (execStateT run plugin) `catch` (\(ex :: AsyncException) -> return plugin)
-    evalStateT (mapM_ sendUnregisterCommand ["list", "load", "reload", "unload"]) plugin
+    plugin' <- (execStateT run plugin) `catch` (\(_ :: AsyncException) -> return plugin)
+    evalStateT (mapM_ sendUnregisterCommand ["list", "load", "reload", "unload"]) plugin'
 
 -- | The IrcPlugin monad main function
 run :: IrcPlugin ()

@@ -4,9 +4,9 @@ module Hsbot.Core
     ) where
 
 import Control.Concurrent
-import Control.Concurrent.Chan
+import Control.Concurrent.Chan()
 import Control.Monad.State
-import Data.List
+import Data.List()
 import qualified Data.Map as M
 import Network
 import System.IO
@@ -36,8 +36,8 @@ connectServer server = do
 disconnectServer :: IrcBot ()
 disconnectServer = do
     bot <- get
-    liftIO $ killThread $ readerThreadId bot
     mapM_ unloadPlugin (M.keys $ botPlugins bot)
+    liftIO $ killThread $ readerThreadId bot
     liftIO $ hClose $ botHandle bot
     return ()
 

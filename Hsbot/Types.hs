@@ -13,7 +13,7 @@ module Hsbot.Types
     ) where
 
 import Control.Concurrent
-import Control.Concurrent.Chan
+import Control.Concurrent.Chan()
 import Control.Monad.State
 import qualified Data.Map as M
 import Network
@@ -97,7 +97,7 @@ data IntCmd = IntCmd
     , intCmdMsg  :: String -- the IrcMsg associated with the command
     } deriving (Show)
 
-data BotMsg = InputMsg IrcMsg | OutputMsg IrcMsg | InternalCmd IntCmd
+data BotMsg = InputMsg IrcMsg | OutputMsg IrcMsg | InternalCmd IntCmd deriving (Show)
 
 -- | A plugin (core side)
 data Plugin = Plugin

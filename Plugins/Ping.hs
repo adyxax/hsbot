@@ -14,7 +14,7 @@ import Hsbot.Types
 mainPing :: Chan BotMsg -> Chan BotMsg -> IO ()
 mainPing serverChan chan = do
     let plugin = PluginInstance "Ping" serverChan chan
-    (execStateT run plugin) `catch` (\(ex :: AsyncException) -> return plugin)
+    _ <- (execStateT run plugin) `catch` (\(_ :: AsyncException) -> return plugin)
     return ()
 
 -- | The IrcPlugin monad main function

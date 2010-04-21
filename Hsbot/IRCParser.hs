@@ -24,9 +24,9 @@ pMsg = do
 
 pPrefix :: ParsecT String u Identity [Char]
 pPrefix = do
-    char ':'
+    _ <- char ':'
     pfx <- many1 (noneOf " ")
-    space
+    _ <- space
     return pfx
 
 pCommand :: ParsecT String u Identity [Char]
