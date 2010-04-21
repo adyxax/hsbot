@@ -28,6 +28,7 @@ imain = do
 run :: IrcBot ()
 run = do
     initServer
+    liftIO $ putStrLn "Starting plugins..."
     loadPlugin "Ping" mainPing
     loadPlugin "Core" mainCore
     loadPlugin "Quote" mainQuote
