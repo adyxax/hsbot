@@ -38,16 +38,16 @@ unregisterCommand cmd pluginName' = do
 
 -- | Dispatches an input message
 dispatchMessage :: BotMsg -> IrcBot ()
-dispatchMessage (InputMsg inputMsg) = do
-    plugins <- gets botPlugins
-    cmds    <- gets botCommands
-    if isPluginCommand  --TODO : how to get rid of this if?
-      then
+dispatchMessage (InputMsg inputMsg)
+    | isPluginCommand = do
+        plugins <- gets botPlugins
+        cmds    <- gets botCommands
         let key         = tail $ head $ words getMsgContent
             pluginNames = fromMaybe [] $ M.lookup key cmds
             plugins'    = fromMaybe [] $ mapM (flip M.lookup plugins) pluginNames
-        in mapM_ (sendRunCommand $ tail getMsgContent) plugins'
-      else
+        mapM_ (sendRunCommand $ tail getMsgContent) plugins'
+    | otherwise       = do
+        plugins <- gets botPlugins
         mapM_ (sendToPlugin (InputMsg inputMsg)) (M.elems plugins)
   where
     isPluginCommand :: Bool

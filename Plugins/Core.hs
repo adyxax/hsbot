@@ -28,9 +28,9 @@ run = forever $ do
   where
     eval :: BotMsg -> IrcPlugin ()
     eval (InternalCmd intCmd) = do
+        let request = intCmdBotMsg intCmd
         case intCmdCmd intCmd of
             "RUN"    -> let stuff = words $ intCmdMsg intCmd
-                            request = intCmdBotMsg intCmd
                         in case head stuff of
                             "list"   -> listPlugins request
                             "load"   -> loadPlugin $ tail stuff
@@ -38,9 +38,7 @@ run = forever $ do
                             "unload" -> unloadPlugin $ tail stuff
                             _      -> lift $ trace $ show intCmd -- TODO : help message
             "ANSWER" -> let stuff = intCmdMsg intCmd
-                            request = intCmdBotMsg intCmd
-                            chanOrigin = head $ parameters (fromMaybe (IrcMsg Nothing "ARGH" []) request)
-                        in writeMsg $ OutputMsg $ IrcMsg Nothing "PRIVMSG" [chanOrigin, "Loaded plugins : " ++ stuff]
+                        in answerMsg request ("Loaded plugins : " ++ stuff)
             _        -> lift $ trace $ show intCmd
     eval (InputMsg _) = return ()
     eval _ = return ()

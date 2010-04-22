@@ -1,5 +1,6 @@
 module Hsbot.IRCPlugin
-    ( readMsg
+    ( answerMsg
+    , readMsg
     , sendCommand
     , sendCommandWithRequest
     , sendRegisterCommand
@@ -9,6 +10,7 @@ module Hsbot.IRCPlugin
 
 import Control.Concurrent.Chan
 import Control.Monad.State
+import Data.Maybe(fromMaybe)
 
 import Hsbot.Types
 
@@ -23,6 +25,15 @@ writeMsg :: BotMsg -> IrcPlugin ()
 writeMsg botMsg = do
     serverChan <- gets instanceServerChan
     liftIO $ writeChan serverChan $ botMsg
+
+answerMsg :: Maybe IrcMsg -> String -> IrcPlugin ()
+answerMsg request msg = do
+    let incoming   = fromMaybe (IrcMsg Nothing "ARGH" []) request
+        chanOrigin = head $ parameters (incoming)
+        sender     = takeWhile (/= '!') $ fromMaybe "ARGH" (prefix incoming)
+    case head chanOrigin of
+        '#' -> writeMsg $ OutputMsg $ IrcMsg Nothing "PRIVMSG" [chanOrigin, msg]
+        _   -> writeMsg $ OutputMsg $ IrcMsg Nothing "PRIVMSG" [sender, msg]
 
 -- | Commands management
 sendCommand :: String -> String -> String -> IrcPlugin ()
