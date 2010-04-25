@@ -16,7 +16,7 @@ import Hsbot.Types
 -- |Wrap a string with ANSI escape sequences.
 inColor :: String -> [Int] -> String
 inColor str vals = "\ESC[" ++ valstr ++ "m" ++ str ++ "\ESC[0m"
-    where valstr = concat $ intersperse ";" $ map show vals
+    where valstr = concat . intersperse ";" $ map show vals
 
 -- | Sends a string over handle
 sendstr :: String -> IrcBot ()

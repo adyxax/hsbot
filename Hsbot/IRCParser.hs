@@ -18,7 +18,7 @@ pMsg = do
     pfx <- optionMaybe pPrefix
     cmd <- pCommand
     params <- many (char ' ' >> (pLongParam <|> pShortParam))
-    char '\r'
+    _ <- char '\r'
     --eof
     return $ IrcMsg pfx cmd params
 

@@ -1,10 +1,21 @@
 :julien!~julien@ogu21.corp PRIVMSG #shbot :@quote graou snif
 
 * Write the quote module
-* clean the plugin module
-* part chan
+* write the vote system for the quote module
+* only the quote reporter should be able to edit it
+* detect too identical quoting in a raw, or implement quote abort
+* handle the case we attempt to quote on an empty database
+* solve the multiquote problem about the quote owner (with a quoteElem data structure)
+* find a better way to track who voted for what?
 
-* add admin checks for cmds
+* write the help module
+* clean the plugin module
+* clean cleaning for the quote module
+* write a channel tracking plugin. Write the part chan command
+
+* add a plugin for admin checks and tracking
+* add the quoteadm command to the quote module
+* add a plugin for timer functionnalities other plugin could subscribe to (the troll plugin).
 * add register for casual conversations for plugins?
 * add a "I have stuff to save so don't kill me too hard" status for plugins
 

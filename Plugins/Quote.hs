@@ -29,9 +29,9 @@ type QuoteBot a = StateT QuoteDB IO a
 -- | The plugin's main entry point
 mainQuote :: Chan BotMsg -> Chan BotMsg -> IO ()
 mainQuote serverChan chan = do
-    let plugin = PluginInstance "Quote" serverChan chan
+    let plugin = PluginState "Quote" serverChan chan
     evalStateT (mapM_ sendRegisterCommand ["quote"]) plugin
-    (execStateT run plugin) `catch` (\(ex :: AsyncException) -> return plugin)
+    _ <- (evalStateT (run quoteBot) plugin) `catch` (\(_ :: AsyncException) -> return quoteBot)
     evalStateT (mapM_ sendUnregisterCommand ["quote"]) plugin
 
 -- | The IrcPlugin monad main function

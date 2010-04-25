@@ -5,7 +5,7 @@ module Hsbot.Core
 
 import Control.Concurrent
 import Control.Concurrent.Chan()
-import Control.Exception
+import Control.Exception(IOException, catch)
 import Control.Monad.State
 import Data.List()
 import qualified Data.Map as M
@@ -44,10 +44,10 @@ disconnectServer = do
     mapM_ unloadPlugin (M.keys $ botPlugins bot)
     liftIO $ putStrLn"done."
     liftIO $ putStr "Closing server communication channel... "
-    liftIO $ killThread $ readerThreadId bot
+    liftIO . killThread $ readerThreadId bot
     liftIO $ putStrLn "done."
-    liftIO $ putStr $ "Disconnecting from " ++ name ++ "... "
-    liftIO $ hClose $ botHandle bot
+    liftIO . putStr $ "Disconnecting from " ++ name ++ "... "
+    liftIO . hClose $ botHandle bot
     liftIO $ putStrLn "done."
 
 -- | Socket reading loop

@@ -15,10 +15,10 @@ import Hsbot.Utils
 initServer :: IrcBot ()
 initServer = do
     server <- gets serverConfig
-    sendstr $ serializeIrcMsg $ IrcMsg Nothing "NICK" [(nickname server)]
-    sendstr $ serializeIrcMsg $ IrcMsg Nothing "USER" [(nickname server), "0", "*", (realname server)]
+    sendstr . serializeIrcMsg $ IrcMsg Nothing "NICK" [(nickname server)]
+    sendstr . serializeIrcMsg $ IrcMsg Nothing "USER" [(nickname server), "0", "*", (realname server)]
     when (not . null $ password server) $ do
-        sendstr $ serializeIrcMsg $ IrcMsg Nothing "PRIVMSG" ["nickserv", "identify", (password server)]
+        sendstr . serializeIrcMsg $ IrcMsg Nothing "PRIVMSG" ["nickserv", "identify", (password server)]
     mapM_ joinChan (joinChannels server)
 
 -- | Run a server
@@ -40,6 +40,6 @@ joinChan name = do
         newChannel  = Channel name
                               (nickname $ serverConfig bot)
                               (administrators $ serverConfig bot)
-    sendstr $ serializeIrcMsg $ IrcMsg Nothing "JOIN" [name]
+    sendstr . serializeIrcMsg $ IrcMsg Nothing "JOIN" [name]
     put $ bot { chans = newChannel : oldChannels }
 

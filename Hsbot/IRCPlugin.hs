@@ -1,5 +1,7 @@
 module Hsbot.IRCPlugin
-    ( answerMsg
+    ( IrcPlugin
+    , PluginState(..)
+    , answerMsg
     , readMsg
     , sendCommand
     , sendCommandWithRequest
@@ -14,6 +16,16 @@ import Data.Maybe(fromMaybe)
 
 import Hsbot.Types
 
+-- | The IrcPlugin monad
+type IrcPlugin a = StateT PluginState IO a
+
+-- | An IRCPlugin state
+data PluginState = PluginState
+    { instanceName       :: String      -- The plugin's name
+    , instanceServerChan :: Chan BotMsg -- The server channel
+    , instanceChan       :: Chan BotMsg -- The plugin channel
+    }
+
 -- | Basic input output for IrcPlugins
 readMsg :: IrcPlugin (BotMsg)
 readMsg = do
@@ -24,26 +36,25 @@ readMsg = do
 writeMsg :: BotMsg -> IrcPlugin ()
 writeMsg botMsg = do
     serverChan <- gets instanceServerChan
-    liftIO $ writeChan serverChan $ botMsg
+    liftIO . writeChan serverChan $ botMsg
 
-answerMsg :: Maybe IrcMsg -> String -> IrcPlugin ()
+answerMsg :: IrcMsg -> String -> IrcPlugin ()
 answerMsg request msg = do
-    let incoming   = fromMaybe (IrcMsg Nothing "ARGH" []) request
-        chanOrigin = head $ parameters (incoming)
-        sender     = takeWhile (/= '!') $ fromMaybe "ARGH" (prefix incoming)
+    let chanOrigin = head $ parameters request
+        sender     = takeWhile (/= '!') $ fromMaybe "" (prefix request)
     case head chanOrigin of
-        '#' -> writeMsg $ OutputMsg $ IrcMsg Nothing "PRIVMSG" [chanOrigin, msg]
-        _   -> writeMsg $ OutputMsg $ IrcMsg Nothing "PRIVMSG" [sender, msg]
+        '#' -> writeMsg . OutputMsg $ IrcMsg Nothing "PRIVMSG" [chanOrigin, msg]
+        _   -> writeMsg . OutputMsg $ IrcMsg Nothing "PRIVMSG" [sender, msg]
 
 -- | Commands management
 sendCommand :: String -> String -> String -> IrcPlugin ()
-sendCommand cmd to params = sendCommandWithRequest cmd to params Nothing
+sendCommand cmd to params = sendCommandWithRequest cmd to params emptyIrcMsg
 
-sendCommandWithRequest :: String -> String -> String -> Maybe IrcMsg -> IrcPlugin ()
+sendCommandWithRequest :: String -> String -> String -> IrcMsg -> IrcPlugin ()
 sendCommandWithRequest cmd to params originalRequest = do
     serverChan <- gets instanceServerChan
     from       <- gets instanceName
-    liftIO $ writeChan serverChan $ InternalCmd $ IntCmd cmd from to params originalRequest
+    liftIO . writeChan serverChan . InternalCmd $ IntCmd cmd from to params originalRequest
 
 sendRegisterCommand :: String -> IrcPlugin ()
 sendRegisterCommand cmd = sendCommand "REGISTER" "CORE" cmd

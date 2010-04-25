@@ -16,7 +16,7 @@ localhost :: IrcServer
 localhost = IrcServer
     { serverAddress  = "localhost"
     , serverPort     = PortNumber 6667
-    , joinChannels   = ["#shbot"]
+    , joinChannels   = ["#shbot", "#geek"]
     , nickname       = "hsbot"
     , password       = ""
     , realname       = "The One True bot, with it's haskell soul."

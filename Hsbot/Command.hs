@@ -42,7 +42,7 @@ dispatchMessage (InputMsg inputMsg)
     | isPluginCommand = do
         plugins <- gets botPlugins
         cmds    <- gets botCommands
-        let key         = tail $ head $ words getMsgContent
+        let key         = tail . head $ words getMsgContent
             pluginNames = fromMaybe [] $ M.lookup key cmds
             plugins'    = fromMaybe [] $ mapM (flip M.lookup plugins) pluginNames
         mapM_ (sendRunCommand $ tail getMsgContent) plugins'
@@ -56,7 +56,7 @@ dispatchMessage (InputMsg inputMsg)
             , (head getMsgContent) == (commandPrefix config) ]
     sendRunCommand :: String -> Plugin -> IrcBot ()
     sendRunCommand cmd plugin = do
-        sendToPlugin (InternalCmd $ IntCmd "RUN" "CORE" (pluginName plugin) cmd (Just inputMsg)) plugin
+        sendToPlugin (InternalCmd $ IntCmd "RUN" "CORE" (pluginName plugin) cmd inputMsg) plugin
     getMsgContent :: String
     getMsgContent = unwords . tail $ parameters inputMsg
 dispatchMessage _ = return ()

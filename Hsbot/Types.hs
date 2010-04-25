@@ -7,9 +7,8 @@ module Hsbot.Types
     , IrcServer(..)
     , IrcBot
     , IrcMsg(..)
-    , IrcPlugin
     , Plugin(..)
-    , PluginInstance(..)
+    , emptyIrcMsg
     ) where
 
 import Control.Concurrent
@@ -47,11 +46,6 @@ instance Show IrcServer where
                                             UnixSocket u   -> show u)
                                         ++ (show c) ++ (show n) ++ (show pa) ++ (show r) ++ (show ad)
 
--- instance Show PortID where
---     show (PortNumber n) = show n
---     show (Service s)    = show s
---     show (UnixSocket g) = show g
-
 -- | The IrcBot monad
 type IrcBot a = StateT Bot IO a
 
@@ -68,11 +62,11 @@ data Bot = Bot
     }
 
 instance Show Bot where
-    show (Bot _ s h c p _ _ cmds) =  "Start time : " ++ (show s) ++ "\n"
-                                  ++ "Handle     : " ++ (show h) ++ "\n"
-                                  ++ "Channels   : " ++ (show c) ++ "\n"
-                                  ++ "Plugins    : " ++ (show p) ++ "\n"
-                                  ++ "Commands   : " ++ (show cmds) ++ "\n"
+    show (Bot _ s h c p _ _ cmds) = unlines [ "Start time : " ++ (show s)
+                                            , "Handle     : " ++ (show h)
+                                            , "Channels   : " ++ (show c)
+                                            , "Plugins    : " ++ (show p)
+                                            , "Commands   : " ++ (show cmds)]
 
 -- | A channel connection
 data Channel = Channel
@@ -88,13 +82,16 @@ data IrcMsg = IrcMsg
     , parameters :: [String]     -- the message parameters
     } deriving (Show)
 
+emptyIrcMsg :: IrcMsg
+emptyIrcMsg = IrcMsg Nothing "" []
+
 -- | An internal command
 data IntCmd = IntCmd
-    { intCmdCmd    :: String       -- the internal command
-    , intCmdFrom   :: String       -- who issues it
-    , intCmdTo     :: String       -- who it is destinated to
-    , intCmdMsg    :: String       -- the message to be transfered
-    , intCmdBotMsg :: Maybe IrcMsg -- An IrcMsg attached to the command
+    { intCmdCmd    :: String -- the internal command
+    , intCmdFrom   :: String -- who issues it
+    , intCmdTo     :: String -- who it is destinated to
+    , intCmdMsg    :: String -- the message to be transfered
+    , intCmdBotMsg :: IrcMsg -- An IrcMsg attached to the command
     } deriving (Show)
 
 data BotMsg = InputMsg IrcMsg | OutputMsg IrcMsg | InternalCmd IntCmd deriving (Show)
@@ -108,14 +105,4 @@ data Plugin = Plugin
 
 instance Show Plugin where
     show (Plugin name _ _) = show name
-
--- | A IrcPlugin ("user" side)
-data PluginInstance = PluginInstance
-    { instanceName       :: String      -- The plugin's name
-    , instanceServerChan :: Chan BotMsg -- The server channel
-    , instanceChan       :: Chan BotMsg -- The plugin channel
-    }
-
--- | The IrcPlugin monad
-type IrcPlugin a = StateT PluginInstance IO a
 

@@ -13,7 +13,7 @@ import Hsbot.Types
 -- | The plugin's main entry point
 mainPing :: Chan BotMsg -> Chan BotMsg -> IO ()
 mainPing serverChan chan = do
-    let plugin = PluginInstance "Ping" serverChan chan
+    let plugin = PluginState "Ping" serverChan chan
     _ <- (execStateT run plugin) `catch` (\(_ :: AsyncException) -> return plugin)
     return ()
 

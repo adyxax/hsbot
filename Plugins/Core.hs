@@ -5,7 +5,6 @@ module Plugins.Core
 import Control.Concurrent.Chan(Chan)
 import Control.Exception
 import Control.Monad.State
-import Data.Maybe(fromMaybe)
 import Prelude hiding (catch)
 
 import Hsbot.IRCPlugin
@@ -15,7 +14,7 @@ import Hsbot.Utils
 -- | The plugin's main entry point
 mainCore :: Chan BotMsg -> Chan BotMsg -> IO ()
 mainCore serverChan chan = do
-    let plugin = PluginInstance "Core" serverChan chan
+    let plugin = PluginState "Core" serverChan chan
     evalStateT (mapM_ sendRegisterCommand ["list", "load", "reload", "unload"]) plugin
     plugin' <- (execStateT run plugin) `catch` (\(_ :: AsyncException) -> return plugin)
     evalStateT (mapM_ sendUnregisterCommand ["list", "load", "reload", "unload"]) plugin'
@@ -36,15 +35,15 @@ run = forever $ do
                             "load"   -> loadPlugin $ tail stuff
                             "reload" -> reloadPlugin $ tail stuff
                             "unload" -> unloadPlugin $ tail stuff
-                            _      -> lift $ trace $ show intCmd -- TODO : help message
+                            _      -> lift . trace $ show intCmd -- TODO : help message
             "ANSWER" -> let stuff = intCmdMsg intCmd
                         in answerMsg request ("Loaded plugins : " ++ stuff)
-            _        -> lift $ trace $ show intCmd
+            _        -> lift . trace $ show intCmd
     eval (InputMsg _) = return ()
     eval _ = return ()
 
 -- | The list command
-listPlugins :: Maybe IrcMsg -> IrcPlugin ()
+listPlugins :: IrcMsg -> IrcPlugin ()
 listPlugins request = do
     sendCommandWithRequest "LIST" "CORE" (unwords []) request
 

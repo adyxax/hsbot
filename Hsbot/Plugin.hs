@@ -33,7 +33,7 @@ effectivelyLoadPlugin name entryPoint serverChan = do
     return $ Plugin name threadId chan
 
 -- | Sends a list of loaded plugins
-listPlugins :: Maybe IrcMsg -> String -> IrcBot ()
+listPlugins :: IrcMsg -> String -> IrcBot ()
 listPlugins originalRequest dest = do
     plugins <- gets botPlugins
     let listing = unwords $ M.keys plugins
