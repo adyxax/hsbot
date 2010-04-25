@@ -1,6 +1,5 @@
 :julien!~julien@ogu21.corp PRIVMSG #shbot :@quote graou snif
 
-* Write the quote module
 * write the vote system for the quote module
 * only the quote reporter should be able to edit it
 * detect too identical quoting in a raw, or implement quote abort
@@ -23,4 +22,6 @@
 * Make the bot auto-reconnect (/!\ admin plugin!)
 * discard all trace with a color param and replace those with functions info/warn/error/debug
 * write a safe reload : try reload before unloading
+* remove from Types.hs what can be removed from it
+
 
