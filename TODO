@@ -1,5 +1,8 @@
 :julien!~julien@ogu21.corp PRIVMSG #shbot :@quote graou snif
 
+* Handle bot/Plugin state updates threw the masters' Chans
+* Find a way to handle bot reloading threw exec
+
 * write the vote system for the quote module
 * only the quote reporter should be able to edit it
 * detect too identical quoting in a raw, or implement quote abort

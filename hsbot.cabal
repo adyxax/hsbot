@@ -1,0 +1,73 @@
+name: hsbot
+version: 0.1.0
+cabal-version: >= 1.8
+build-type: Simple
+license: BSD3
+license-file: LICENSE
+copyright: Copyright (c) 2010 Julien Dessaux
+author: Julien Dessaux
+maintainer: judessaux@gmail.com
+homepage: http://code.adyxax.org/hsbot
+bug-reports: http://code.adyxax.org/hsbot/tracker
+category: Hsbot
+synopsis: An multi-purpose bot, mainly an IRC bot
+description:
+  hsbot is a multi-purpose bot, written slowly, as long as I learned more
+  haskell. It features IRC integration and some plugins. I tried to design
+  a bot architecture as modular and as flexible as possible.
+
+Executable hsbot
+  Main-Is: Main.hs
+  ghc-options: -Wall
+  extensions: DeriveDataTypeable ScopedTypeVariables
+  build-depends: base >= 4.1,
+                 containers >= 0.3,
+                 directory >= 1.0,
+                 filepath >= 1.1,
+                 ghc >= 6.12,
+                 haskell98 >= 1.0,
+                 mtl >= 1.1,
+                 network >= 2.2,
+                 old-time >= 1.0,
+                 parsec >= 3.1,
+                 process >= 1.0,
+                 random >= 1.0,
+                 text >= 0.7,
+                 time >= 1.1,
+                 unix >= 2.4
+
+Library
+  exposed-modules:
+                 Hsbot.Config
+                 Hsbot.Core
+                 Hsbot.Irc.Command
+                 Hsbot.Irc.Config
+                 Hsbot.Irc.Core
+                 Hsbot.Irc.Message
+                 Hsbot.Irc.Plugin
+                 Hsbot.Irc.PluginCommons
+                 Hsbot.Irc.Plugin.Core
+                 Hsbot.Irc.Plugin.Dummy
+                 Hsbot.Irc.Plugin.Ping
+                 Hsbot.Irc.Plugin.Quote
+                 Hsbot.Irc.Server
+                 Hsbot.Irc.Types
+                 Hsbot.Message
+                 Hsbot.Plugin
+  ghc-options: -Wall
+  extensions: DeriveDataTypeable ScopedTypeVariables
+  build-depends: base >= 4.1,
+                 containers >= 0.3,
+                 directory >= 1.0,
+                 filepath >= 1.1,
+                 ghc >= 6.12,
+                 haskell98 >= 1.0,
+                 mtl >= 1.1,
+                 network >= 2.2,
+                 old-time >= 1.0,
+                 parsec >= 3.1,
+                 random >= 1.0,
+                 text >= 0.7,
+                 time >= 1.1,
+                 unix >= 2.4
+

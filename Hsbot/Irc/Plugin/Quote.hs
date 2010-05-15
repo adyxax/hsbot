@@ -1,7 +1,8 @@
-module Plugins.Quote
-    ( mainQuote
+module Hsbot.Irc.Plugin.Quote
+    ( ircBotPluginQuote
     ) where
 
+import Control.Concurrent (myThreadId)
 import Control.Concurrent.Chan
 import Control.Exception
 import Control.Monad.State
@@ -10,13 +11,15 @@ import Data.Maybe(fromMaybe)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Data.Time
+import System.Directory
 import IO hiding (catch)
 import Prelude hiding (catch)
+import System.FilePath
+import System.Posix.Files
 import System.Random(randomRIO)
 
-import Hsbot.IRCPlugin
-import Hsbot.Types
-import Hsbot.Utils
+import Hsbot.Irc.Message
+import Hsbot.Irc.PluginCommons
 
 -- | A quote element
 data QuoteElt = QuoteElt
@@ -40,16 +43,29 @@ data QuoteBotState = QuoteBotState
     } deriving (Read, Show)
 
 -- | The QuoteBot monad
-type QuoteBot a = StateT QuoteBotState (StateT PluginState IO) a
+type QuoteBot a = StateT QuoteBotState (StateT IrcPluginState IO) a
 
 -- | The plugin's main entry point
-mainQuote :: Chan BotMsg -> Chan BotMsg -> IO ()
-mainQuote serverChan chan = do
+ircBotPluginQuote :: Chan IrcBotMsg -> Chan IrcBotMsg -> IO ()
+ircBotPluginQuote myChan masterChan = do
     -- First of all we restore the database
-    txtQuoteBot <- TIO.readFile $ "quotedb.txt"
+    dir <- getAppUserDataDirectory "hsbot"
+    let dbfile = dir </> "quotedb.txt"
+    dbfileExists <- fileExist dbfile
+    if not dbfileExists
+      then
+        let quoteBot = QuoteBotState 0 M.empty M.empty
+        in TIO.writeFile dbfile (T.pack $ show quoteBot)
+      else
+        return ()
+    txtQuoteBot <- TIO.readFile $ dbfile
     let quoteBot = read (T.unpack txtQuoteBot) :: QuoteBotState
     -- The plugin main loop
-    let plugin = PluginState "Quote" serverChan chan
+    threadId <- myThreadId
+    let plugin = IrcPluginState { ircPluginName       = "Quote"
+                                , ircPluginThreadId   = threadId
+                                , ircPluginChan       = myChan
+                                , ircPluginMasterChan = masterChan }
     evalStateT (mapM_ sendRegisterCommand ["quote"]) plugin
     _ <- (evalStateT (run quoteBot) plugin) `catch` (\(_ :: AsyncException) -> return quoteBot)
     evalStateT (mapM_ sendUnregisterCommand ["quote"]) plugin
@@ -62,30 +78,31 @@ run quoteBot = do
     run quoteBot'
   where
     -- | evaluate what we just received
-    eval :: BotMsg -> IrcPlugin (QuoteBotState)
-    eval (InternalCmd intCmd)
-      | intCmdCmd intCmd == "RUN" = do
+    eval :: IrcBotMsg -> IrcPlugin (QuoteBotState)
+    eval (IntIrcCmd intCmd)
+      | ircCmdCmd intCmd == "RUN" = do
           quoteBot' <- execStateT (runCommand intCmd) quoteBot
           return quoteBot'
-      | otherwise = do
-          lift . trace $ show intCmd
-          return quoteBot
-    eval (InputMsg _) = return (quoteBot)
-    eval _ = return (quoteBot)
+      | otherwise = return quoteBot
+    eval (InIrcMsg _) = return (quoteBot)
+    eval (OutIrcMsg _) = return (quoteBot)
 
 -- | run a command we received
-runCommand :: IntCmd -> QuoteBot ()
+runCommand :: IrcCmd -> QuoteBot ()
 runCommand intCmd
   | theCommand == "quote" = runQuoteCommand
-  | otherwise = do
-      lift . lift . trace $ show intCmd -- TODO : help message
+  | otherwise = return ()
   where
     -- | the message is a quote command
     runQuoteCommand :: QuoteBot ()
       | length args == 0 = do
           quoteDB <- gets quoteBotDB
           x <- liftIO $ randomRIO (0, (length $ M.keys quoteDB) - 1)
-          mapM_ (lift . answerMsg request) (formatQuote (M.keys quoteDB !! x) (M.elems quoteDB !! x))
+          if (length $ M.keys quoteDB) > 0
+            then
+              mapM_ (lift . answerMsg request) (formatQuote (M.keys quoteDB !! x) (M.elems quoteDB !! x))
+            else
+              lift $ answerMsg request "The quote database is empty."
       | otherwise = do
           dispatchQuoteCmd $ head args
     -- | quote command dispatcher
@@ -94,7 +111,7 @@ runCommand intCmd
       | cmd == "start"  = do
           quoteBot <- get
           now <- liftIO $ getCurrentTime
-          let sender   = takeWhile (/= '!') $ fromMaybe "ARGH" (prefix request)
+          let sender   = takeWhile (/= '!') $ fromMaybe "ARGH" (ircMsgPrefix request)
               newQuote = Quote sender [(quoteElt stuff)] now 0
               quoteId     = nextQuoteId quoteBot
               quotesInProgress' = M.insert quoteId  newQuote (quotesInProgress quoteBot)
@@ -134,17 +151,19 @@ runCommand intCmd
             theQuote  = unwords . tail $ msg
         QuoteElt budy theQuote
     -- | utilities
-    params  = words . intCmdMsg $ intCmd
+    params  = words . ircCmdMsg $ intCmd
     theCommand = head params
     args    = tail params
     stuff   = tail args
-    request = intCmdBotMsg intCmd
+    request = ircCmdBotMsg intCmd
 
 -- | The function that sync the quoteDB on disk
 syncQuoteBot :: QuoteBot ()
 syncQuoteBot = do
+    dir <- liftIO $ getAppUserDataDirectory "hsbot"
+    let dbfile = dir </> "quotedb.txt"
+    file' <- liftIO $ openFile dbfile WriteMode
     quoteBot <- get
-    file' <- liftIO $ openFile "quotedb.txt" WriteMode
     liftIO . hPutStr file' $ show quoteBot
     liftIO $ hClose file'
 

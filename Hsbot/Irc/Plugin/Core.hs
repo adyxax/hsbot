@@ -1,20 +1,23 @@
-module Plugins.Core
-    ( mainCore
+module Hsbot.Irc.Plugin.Core
+    ( ircBotPluginCore
     ) where
 
-import Control.Concurrent.Chan(Chan)
+import Control.Concurrent (Chan, myThreadId)
 import Control.Exception
 import Control.Monad.State
 import Prelude hiding (catch)
 
-import Hsbot.IRCPlugin
-import Hsbot.Types
-import Hsbot.Utils
+import Hsbot.Irc.Message
+import Hsbot.Irc.PluginCommons
 
 -- | The plugin's main entry point
-mainCore :: Chan BotMsg -> Chan BotMsg -> IO ()
-mainCore serverChan chan = do
-    let plugin = PluginState "Core" serverChan chan
+ircBotPluginCore :: Chan IrcBotMsg -> Chan IrcBotMsg -> IO ()
+ircBotPluginCore myChan masterChan = do
+    threadId <- myThreadId
+    let plugin = IrcPluginState { ircPluginName       = "Core"
+                                , ircPluginThreadId   = threadId
+                                , ircPluginChan       = myChan
+                                , ircPluginMasterChan = masterChan }
     evalStateT (mapM_ sendRegisterCommand ["list", "load", "reload", "unload"]) plugin
     plugin' <- (execStateT run plugin) `catch` (\(_ :: AsyncException) -> return plugin)
     evalStateT (mapM_ sendUnregisterCommand ["list", "load", "reload", "unload"]) plugin'
@@ -25,21 +28,20 @@ run = forever $ do
     msg <- readMsg
     eval msg
   where
-    eval :: BotMsg -> IrcPlugin ()
-    eval (InternalCmd intCmd) = do
-        let request = intCmdBotMsg intCmd
-        case intCmdCmd intCmd of
-            "RUN"    -> let stuff = words $ intCmdMsg intCmd
+    eval :: IrcBotMsg -> IrcPlugin ()
+    eval (IntIrcCmd intCmd) = do
+        let request = ircCmdBotMsg intCmd
+        case ircCmdCmd intCmd of
+            "RUN"    -> let stuff = words $ ircCmdMsg intCmd
                         in case head stuff of
                             "list"   -> listPlugins request
                             "load"   -> loadPlugin $ tail stuff
                             "reload" -> reloadPlugin $ tail stuff
                             "unload" -> unloadPlugin $ tail stuff
-                            _      -> lift . trace $ show intCmd -- TODO : help message
-            "ANSWER" -> let stuff = intCmdMsg intCmd
+                            _        -> return () -- TODO : help message
+            "ANSWER" -> let stuff = ircCmdMsg intCmd
                         in answerMsg request ("Loaded plugins : " ++ stuff)
-            _        -> lift . trace $ show intCmd
-    eval (InputMsg _) = return ()
+            _        -> return ()
     eval _ = return ()
 
 -- | The list command

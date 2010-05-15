@@ -1,5 +1,8 @@
-module Hsbot.IRCParser
-    ( ParseError
+module Hsbot.Irc.Message
+    ( IrcBotMsg (..)
+    , IrcCmd (..)
+    , IrcMsg (..)
+    , emptyIrcMsg
     , parseIrcMsg
     , serializeIrcMsg
     ) where
@@ -7,7 +10,26 @@ module Hsbot.IRCParser
 import Control.Monad.Identity
 import Text.Parsec
 
-import Hsbot.Types
+-- | An IRC message
+data IrcMsg = IrcMsg
+    { ircMsgPrefix     :: Maybe String -- the message prefix
+    , ircMsgCommand    :: String       -- the message command
+    , ircMsgParameters :: [String]     -- the message parameters
+    } deriving (Show)
+
+emptyIrcMsg :: IrcMsg
+emptyIrcMsg = IrcMsg Nothing "" []
+
+-- | An internal command
+data IrcCmd = IrcCmd
+    { ircCmdCmd    :: String -- the internal command
+    , ircCmdFrom   :: String -- who issues it
+    , ircCmdTo     :: String -- who it is destinated to
+    , ircCmdMsg    :: String -- the message to be transfered
+    , ircCmdBotMsg :: IrcMsg -- An IrcMsg attached to the command
+    } deriving (Show)
+
+data IrcBotMsg = InIrcMsg IrcMsg | OutIrcMsg IrcMsg | IntIrcCmd IrcCmd deriving (Show)
 
 -- | Parses an IrcInput
 parseIrcMsg :: String -> Either ParseError IrcMsg
@@ -38,7 +60,7 @@ pLongParam = char ':' >> (many1 (noneOf "\r"))
 pShortParam :: ParsecT String u Identity [Char]
 pShortParam = many1 (noneOf " \r")
 
--- |Serialize an IRC message to a string.
+-- | Serialize an IRC message to a string.
 serializeIrcMsg :: IrcMsg -> String
 serializeIrcMsg (IrcMsg pfx cmd params) = pfxStr ++ cmd ++ paramStr
     where pfxStr = case pfx of
