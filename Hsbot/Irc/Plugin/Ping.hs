@@ -2,7 +2,6 @@ module Hsbot.Irc.Plugin.Ping
     ( ircBotPluginPing
     ) where
 
-import Control.Concurrent (myThreadId)
 import Control.Concurrent.Chan
 import Control.Exception
 import Control.Monad.State
@@ -14,9 +13,7 @@ import Hsbot.Irc.PluginCommons
 -- | The plugin's main entry point
 ircBotPluginPing :: Chan IrcBotMsg -> Chan IrcBotMsg -> IO ()
 ircBotPluginPing myChan masterChan = do
-    threadId <- myThreadId
     let plugin = IrcPluginState { ircPluginName       = "Ping"
-                                , ircPluginThreadId   = threadId
                                 , ircPluginChan       = myChan
                                 , ircPluginMasterChan = masterChan }
     _ <- (execStateT run plugin) `catch` (\(_ :: AsyncException) -> return plugin)

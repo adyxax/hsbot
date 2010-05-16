@@ -48,14 +48,13 @@ loadIrcPlugin pluginName = do
     let oldPlugins = ircBotPlugins ircbot
     -- We check for unicity
     case M.lookup pluginName oldPlugins of
-        Just plugin -> return ()
-        Nothing     -> do
+        Just _  -> return ()
+        Nothing -> do
             threadId <- liftIO $ forkIO (entryPoint pluginChan masterChan)
             let plugin  = IrcPluginState { ircPluginName       = pluginName
-                                         , ircPluginThreadId   = threadId
                                          , ircPluginChan       = pluginChan
                                          , ircPluginMasterChan = masterChan }
-            put $ ircbot { ircBotPlugins = M.insert pluginName plugin oldPlugins }
+            put $ ircbot { ircBotPlugins = M.insert pluginName (plugin, threadId) oldPlugins }
 
 -- | Sends a list of loaded plugins
 listPlugins :: IrcMsg -> String -> IrcBot ()
@@ -63,8 +62,8 @@ listPlugins originalRequest dest = do
     plugins <- gets ircBotPlugins
     let listing = unwords $ M.keys plugins
     case M.lookup dest plugins of
-        Just plugin -> sendToPlugin (IntIrcCmd $ IrcCmd "ANSWER" "CORE" dest listing originalRequest) plugin
-        Nothing     -> return ()
+        Just (plugin, _) -> sendToPlugin (IntIrcCmd $ IrcCmd "ANSWER" "CORE" dest listing originalRequest) plugin
+        Nothing          -> return ()
 
 -- | Unloads a plugin
 unloadPlugin :: String -> IrcBot ()
@@ -72,9 +71,9 @@ unloadPlugin name = do
     bot <- get
     let oldPlugins = ircBotPlugins bot
     case M.lookup name oldPlugins of
-        Just plugin -> do
+        Just (_, threadId) -> do
             let newPlugins = M.delete name oldPlugins
-            liftIO $ throwTo (ircPluginThreadId plugin) UserInterrupt
+            liftIO $ throwTo threadId UserInterrupt
             put $ bot { ircBotPlugins = newPlugins }
         Nothing     -> return ()
 

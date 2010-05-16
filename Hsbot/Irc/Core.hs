@@ -1,5 +1,5 @@
 module Hsbot.Irc.Core
-    ( ircbot
+    ( startIrcbot
     ) where
 
 import Control.Concurrent
@@ -21,8 +21,8 @@ import Hsbot.Irc.Types
 import Hsbot.Message (BotMsg)
 
 -- | IrcBot's main entry point
-ircbot :: IrcConfig -> Chan BotMsg -> Chan BotMsg -> IO ()
-ircbot config masterChan myChan = do
+startIrcbot :: IrcConfig -> Chan BotMsg -> Chan BotMsg -> IO ()
+startIrcbot config masterChan myChan = do
     startTime <- getCurrentTime
     putStrLn "[IrcBot] Opening communication channel... "
     chan <- newChan :: IO (Chan IrcBotMsg)
@@ -54,6 +54,9 @@ ircbot config masterChan myChan = do
     putStrLn "[IrcBot] Entering main loop... "
     _ <- ircBotLoop ircBotState' `catch` (\(_ :: IOException) -> return ())
     return ()
+
+--resumeIrcBot
+--resumeIrcBot
 
 -- | Runs the IrcBot's reader loop
 ircBotReader :: Handle -> Chan IrcBotMsg -> ThreadId -> IO ()
@@ -126,9 +129,9 @@ dispatchMessage (InIrcMsg inIrcMsg) = do
         let key         = tail . head $ words getMsgContent
             pluginNames = fromMaybe [] $ M.lookup key cmds
             plugins'    = fromMaybe [] $ mapM (flip M.lookup plugins) pluginNames
-        in mapM_ (sendRunCommand $ tail getMsgContent) plugins'
+        in mapM_ (sendRunCommand (tail getMsgContent) . fst) plugins'
       else
-        mapM_ (sendToPlugin $ InIrcMsg inIrcMsg) (M.elems plugins)
+        mapM_ (sendToPlugin (InIrcMsg inIrcMsg) . fst) (M.elems plugins)
   where
     isPluginCommand :: IrcConfig -> Bool
     isPluginCommand config =

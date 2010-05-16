@@ -23,7 +23,6 @@ type IrcPlugin = StateT IrcPluginState IO
 -- | A plugin state
 data IrcPluginState = IrcPluginState
     { ircPluginName       :: String         -- The plugin's name
-    , ircPluginThreadId   :: ThreadId       -- The plugin thread
     , ircPluginChan       :: Chan IrcBotMsg -- The plugin chan
     , ircPluginMasterChan :: Chan IrcBotMsg -- The master's chan
     }

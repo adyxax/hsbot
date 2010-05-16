@@ -17,7 +17,6 @@ type Plugin = StateT PluginState IO
 -- | A plugin state
 data PluginState = PluginState
     { pluginName       :: String              -- The plugin's name
-    , pluginThreadId   :: ThreadId            -- The plugin thread
     , pluginChan       :: Chan BotMsg         -- The plugin chan
     , pluginHandles    :: M.Map String Handle -- the plugins's handles
     }

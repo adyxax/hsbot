@@ -21,15 +21,15 @@ type IrcBot = StateT IrcBotState IO
 
 -- | An Ircbot state
 data IrcBotState = IrcBotState
-    { ircBotStartTime            :: UTCTime                     -- the bot's uptime
-    , ircBotPlugins              :: M.Map String IrcPluginState -- Loaded plugins
-    , ircBotCommands             :: M.Map String [String]       -- Loaded plugins
-    , ircBotChan                 :: Chan IrcBotMsg              -- The IrcBot's communication channel
-    , ircBotMasterChan           :: Chan BotMsg                 -- The Hsbot communication channel
-    , ircBotMyChan               :: Chan BotMsg                 -- The Hsbot communication channel
-    , ircBotServerState          :: IrcServerState              -- The state of the IrcServer
-    , ircBotHandle               :: Handle                      -- The server's socket/handle
-    , ircBotConfig               :: IrcConfig                   -- The starting configuration
+    { ircBotStartTime            :: UTCTime                                 -- the bot's uptime
+    , ircBotPlugins              :: M.Map String (IrcPluginState, ThreadId) -- Loaded plugins
+    , ircBotCommands             :: M.Map String [String]                   -- Loaded plugins
+    , ircBotChan                 :: Chan IrcBotMsg                          -- The IrcBot's communication channel
+    , ircBotMasterChan           :: Chan BotMsg                             -- The Hsbot communication channel
+    , ircBotMyChan               :: Chan BotMsg                             -- The Hsbot communication channel
+    , ircBotServerState          :: IrcServerState                          -- The state of the IrcServer
+    , ircBotHandle               :: Handle                                  -- The server's socket/handle
+    , ircBotConfig               :: IrcConfig                               -- The starting configuration
     , ircBotReaderThreadId       :: ThreadId
     , ircBotMasterReaderThreadId :: ThreadId
     }

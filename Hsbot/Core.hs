@@ -13,7 +13,7 @@ import System.IO()
 
 import Hsbot.Config
 import Hsbot.Irc.Config
-import Hsbot.Irc.Core (ircbot)
+import Hsbot.Irc.Core
 import Hsbot.Message
 import Hsbot.Plugin
 
@@ -22,10 +22,10 @@ type Bot = StateT BotState IO
 
 -- | An Hsbot state
 data BotState = BotState
-    { botStartTime :: UTCTime                  -- the bot's uptime
-    , botPlugins   :: M.Map String PluginState -- Loaded plugins
-    , botChan      :: Chan BotMsg              -- The bot's communication channel
-    , botConfig    :: Config                   -- the bot's starting config
+    { botStartTime :: UTCTime                              -- the bot's uptime
+    , botPlugins   :: M.Map String (PluginState, ThreadId) -- Loaded plugins
+    , botChan      :: Chan BotMsg                          -- The bot's communication channel
+    , botConfig    :: Config                               -- the bot's starting config
     }
 
 -- | Bot's main entry point
@@ -62,8 +62,10 @@ spawnIrcPlugins = do
         bot <- get
         let chan  = botChan bot
         pchan <- liftIO (newChan :: IO (Chan BotMsg))
-        threadId <- liftIO $ forkIO (ircbot config chan pchan)
-        let plugin  = PluginState (ircConfigName config) threadId pchan M.empty
+        threadId <- liftIO $ forkIO (startIrcbot config chan pchan)
+        let plugin  = PluginState { pluginName    = ircConfigName config
+                                  , pluginChan    = pchan
+                                  , pluginHandles = M.empty }
             plugins = botPlugins bot
-        put $ bot { botPlugins = M.insert (pluginName plugin) plugin plugins }
+        put $ bot { botPlugins = M.insert (pluginName plugin) (plugin, threadId) plugins }
 

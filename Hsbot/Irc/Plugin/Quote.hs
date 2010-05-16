@@ -2,7 +2,6 @@ module Hsbot.Irc.Plugin.Quote
     ( ircBotPluginQuote
     ) where
 
-import Control.Concurrent (myThreadId)
 import Control.Concurrent.Chan
 import Control.Exception
 import Control.Monad.State
@@ -61,9 +60,7 @@ ircBotPluginQuote myChan masterChan = do
     txtQuoteBot <- TIO.readFile $ dbfile
     let quoteBot = read (T.unpack txtQuoteBot) :: QuoteBotState
     -- The plugin main loop
-    threadId <- myThreadId
     let plugin = IrcPluginState { ircPluginName       = "Quote"
-                                , ircPluginThreadId   = threadId
                                 , ircPluginChan       = myChan
                                 , ircPluginMasterChan = masterChan }
     evalStateT (mapM_ sendRegisterCommand ["quote"]) plugin

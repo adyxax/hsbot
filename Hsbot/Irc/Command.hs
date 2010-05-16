@@ -40,8 +40,8 @@ processInternalCommand (IntIrcCmd ircCmd)
   | otherwise = do
       plugins <- gets ircBotPlugins
       case M.lookup (ircCmdTo ircCmd) plugins of
-          Just plugin -> sendToPlugin (IntIrcCmd ircCmd) plugin
-          Nothing     -> return ()
+          Just (plugin, _) -> sendToPlugin (IntIrcCmd ircCmd) plugin
+          Nothing          -> return ()
 processInternalCommand _ = return ()
 
 -- | Processes a core command

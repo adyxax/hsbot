@@ -2,7 +2,7 @@ module Hsbot.Irc.Plugin.Core
     ( ircBotPluginCore
     ) where
 
-import Control.Concurrent (Chan, myThreadId)
+import Control.Concurrent (Chan)
 import Control.Exception
 import Control.Monad.State
 import Prelude hiding (catch)
@@ -13,9 +13,7 @@ import Hsbot.Irc.PluginCommons
 -- | The plugin's main entry point
 ircBotPluginCore :: Chan IrcBotMsg -> Chan IrcBotMsg -> IO ()
 ircBotPluginCore myChan masterChan = do
-    threadId <- myThreadId
     let plugin = IrcPluginState { ircPluginName       = "Core"
-                                , ircPluginThreadId   = threadId
                                 , ircPluginChan       = myChan
                                 , ircPluginMasterChan = masterChan }
     evalStateT (mapM_ sendRegisterCommand ["list", "load", "reload", "unload"]) plugin
