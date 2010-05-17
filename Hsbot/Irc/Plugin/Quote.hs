@@ -18,7 +18,7 @@ import System.Posix.Files
 import System.Random(randomRIO)
 
 import Hsbot.Irc.Message
-import Hsbot.Irc.PluginCommons
+import Hsbot.Irc.Plugin.Utils
 
 -- | A quote element
 data QuoteElt = QuoteElt

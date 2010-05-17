@@ -8,7 +8,7 @@ import Control.Monad.State
 import Prelude hiding (catch)
 
 import Hsbot.Irc.Message
-import Hsbot.Irc.PluginCommons
+import Hsbot.Irc.Plugin.Utils
 
 -- | The plugin's main entry point
 ircBotPluginPing :: Chan IrcBotMsg -> Chan IrcBotMsg -> IO ()

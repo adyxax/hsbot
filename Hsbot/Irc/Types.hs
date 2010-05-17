@@ -13,7 +13,7 @@ import System.IO
 
 import Hsbot.Irc.Config
 import Hsbot.Irc.Message
-import Hsbot.Irc.PluginCommons
+import Hsbot.Irc.Plugin.Utils
 import Hsbot.Message
 
 -- | The Ircbot monad

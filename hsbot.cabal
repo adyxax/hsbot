@@ -45,11 +45,11 @@ Library
                  Hsbot.Irc.Core
                  Hsbot.Irc.Message
                  Hsbot.Irc.Plugin
-                 Hsbot.Irc.PluginCommons
                  Hsbot.Irc.Plugin.Core
                  Hsbot.Irc.Plugin.Dummy
                  Hsbot.Irc.Plugin.Ping
                  Hsbot.Irc.Plugin.Quote
+                 Hsbot.Irc.Plugin.Utils
                  Hsbot.Irc.Server
                  Hsbot.Irc.Types
                  Hsbot.Message

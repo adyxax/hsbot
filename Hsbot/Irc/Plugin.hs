@@ -16,11 +16,11 @@ import qualified Data.Map as M
 
 import Hsbot.Irc.Config
 import Hsbot.Irc.Message
-import Hsbot.Irc.PluginCommons
 import Hsbot.Irc.Plugin.Core
 import Hsbot.Irc.Plugin.Dummy
 import Hsbot.Irc.Plugin.Ping
 import Hsbot.Irc.Plugin.Quote
+import Hsbot.Irc.Plugin.Utils
 import Hsbot.Irc.Types
 
 -- | Sends a msg to a plugin

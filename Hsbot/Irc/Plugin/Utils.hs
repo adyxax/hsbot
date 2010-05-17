@@ -1,4 +1,4 @@
-module Hsbot.Irc.PluginCommons
+module Hsbot.Irc.Plugin.Utils
     ( IrcPlugin
     , IrcPluginState (..)
     , answerMsg
