@@ -14,7 +14,7 @@ import System.IO
 import Hsbot.Irc.Config
 import Hsbot.Irc.Message
 import Hsbot.Irc.Plugin.Utils
-import Hsbot.Message
+import Hsbot.Types
 
 -- | The Ircbot monad
 type IrcBot = StateT IrcBotState IO

@@ -1,18 +1,36 @@
 module Hsbot.Message
-    ( BotMsg (..)
-    , Msg (..)
-    , processInternalMessage
+    ( processInternalMessage
     ) where
 
+import Control.Monad.State
+import qualified Data.Map as M
+
 import Hsbot.PluginUtils
+import Hsbot.Types
 
--- | A hsbot message
-data Msg = Msg
-    { msgType :: String -- the message type
-    , msgFrom :: String -- who issues it
-    , msgTo   :: String -- who it is destinated to
-    , msgCmd  :: String -- the message to be transfered
-    } deriving (Show)
+-- | Processes an internal message
+processInternalMessage :: BotMsg -> Bot ()
+processInternalMessage (IntMsg msg)
+  | msgTo msg == "CORE" = processCoreMessage msg
+  | otherwise = do
+      plugins <- gets botPlugins
+      case M.lookup (msgTo msg) plugins of
+          Just (plugin, _) -> sendToPlugin (IntMsg msg) plugin
+          Nothing          -> return ()
+processInternalMessage _ = return ()
 
-data BotMsg = InMsg Msg | OutMsg Msg | IntMsg Msg deriving (Show)
+processCoreMessage :: Msg -> Bot ()
+processCoreMessage msg = do
+    case msgCmd msg of
+        "UPDATE"     -> processUpdateCommand msg
+        _            -> return ()
+
+-- | Process an update command
+processUpdateCommand :: Msg -> Bot ()
+processUpdateCommand msg = do
+    bot <- get
+    let oldData = botResumeData bot
+        from    = msgFrom msg
+        stuff   = msgCmd msg
+    put $ bot { botResumeData = M.insert from stuff oldData }
 

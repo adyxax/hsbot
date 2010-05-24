@@ -12,21 +12,9 @@ import Prelude hiding (catch)
 import System.IO()
 
 import Hsbot.Config
-import Hsbot.Irc.Config
-import Hsbot.Irc.Core
 import Hsbot.Message
 import Hsbot.Plugin
-
--- | The Bot monad
-type Bot = StateT BotState IO
-
--- | An Hsbot state
-data BotState = BotState
-    { botStartTime :: UTCTime                              -- the bot's uptime
-    , botPlugins   :: M.Map String (PluginState, ThreadId) -- Loaded plugins
-    , botChan      :: Chan BotMsg                          -- The bot's communication channel
-    , botConfig    :: Config                               -- the bot's starting config
-    }
+import Hsbot.Types
 
 -- | Bot's main entry point
 hsbot :: Config -> IO ()
@@ -34,38 +22,54 @@ hsbot config = do
     startTime <- getCurrentTime
     putStrLn "[Hsbot] Opening communication channel... "
     chan <- newChan :: IO (Chan BotMsg)
+    putStrLn "[Hsbot] Spawning bot state manager... "
+    processUpdateChan <- newChan :: IO (Chan String)
+    reportUpdateChan  <- newChan :: IO (Chan String)
+    updaterThreadId <- forkIO $ readUpdates processUpdateChan reportUpdateChan ""
     putStrLn "[Hsbot] Spawning IrcBot plugins... "
-    botState <- execStateT spawnIrcPlugins BotState { botStartTime = startTime
-                                                    , botPlugins   = M.empty
-                                                    , botChan      = chan
-                                                    , botConfig    = config }
+    botState <- execStateT spawnIrcPlugins BotState { botStartTime  = startTime
+                                                    , botPlugins    = M.empty
+                                                    , botChan       = chan
+                                                    , botConfig     = config
+                                                    , botUpdateChan = processUpdateChan
+                                                    , botResumeData = M.empty }
     putStrLn "[Hsbot] Entering main loop... "
-    botState' <- (execStateT botLoop botState) `catch` (\(_ :: IOException) -> return botState)
+    _ <- (execStateT botLoop botState) `catch` (\(_ :: IOException) -> return botState)
+    killThread updaterThreadId
+    resumeData <- readChan reportUpdateChan
+    print resumeData
     return ()
 
 -- | Run the bot main loop
 botLoop :: Bot ()
 botLoop = forever $ do
     chan <- gets botChan
-    msg <- liftIO $ readChan chan
-    -- process messages
-    return ()
+    msg  <- liftIO $ readChan chan
+    case msg of
+        InMsg  _      -> return ()
+        OutMsg _      -> return ()
+        IntMsg intMsg -> do
+            processInternalMessage $ IntMsg intMsg
+            reportUpdate
 
--- | spawns IrcPlugins
-spawnIrcPlugins :: Bot ()
-spawnIrcPlugins = do
-    config <- gets botConfig
-    mapM_ (spawnIrcPlugin) (ircConfigs config)
+-- | Reports an update to the master bot
+reportUpdate :: Bot ()
+reportUpdate = do
+    bot <- get
+    let updateChan = botUpdateChan bot
+        stuff      = show $ botResumeData bot
+    liftIO $ writeChan updateChan stuff
+
+-- | Runs bot updates' manager thread
+readUpdates :: Chan String -> Chan String -> String -> IO ()
+readUpdates processChan reportChan resumeData = do
+    resumeData' <- (readChan processChan) `catch` handleException
+    readUpdates processChan reportChan resumeData'
   where
-    spawnIrcPlugin :: IrcConfig -> Bot ()
-    spawnIrcPlugin config = do
-        bot <- get
-        let chan  = botChan bot
-        pchan <- liftIO (newChan :: IO (Chan BotMsg))
-        threadId <- liftIO $ forkIO (startIrcbot config chan pchan)
-        let plugin  = PluginState { pluginName    = ircConfigName config
-                                  , pluginChan    = pchan
-                                  , pluginHandles = M.empty }
-            plugins = botPlugins bot
-        put $ bot { botPlugins = M.insert (pluginName plugin) (plugin, threadId) plugins }
+    handleException :: AsyncException -> IO (String)
+    handleException _ = do
+        writeChan reportChan resumeData
+        myId <- myThreadId
+        killThread myId
+        return ""
 

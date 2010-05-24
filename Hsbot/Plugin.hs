@@ -1,23 +1,32 @@
 module Hsbot.Plugin
-    ( Plugin
-    , PluginState (..)
+    ( spawnIrcPlugins
     ) where
 
 import Control.Concurrent
 import Control.Concurrent.Chan ()
 import Control.Monad.State
 import qualified Data.Map as M
-import IO (Handle)
 
-import Hsbot.Message
+import Hsbot.Config
+import Hsbot.Irc.Config
+import Hsbot.Irc.Core
+import Hsbot.Types
 
--- | The Plugin monad
-type Plugin = StateT PluginState IO
-
--- | A plugin state
-data PluginState = PluginState
-    { pluginName       :: String              -- The plugin's name
-    , pluginChan       :: Chan BotMsg         -- The plugin chan
-    , pluginHandles    :: M.Map String Handle -- the plugins's handles
-    }
+-- | spawns IrcPlugins
+spawnIrcPlugins :: Bot ()
+spawnIrcPlugins = do
+    config <- gets botConfig
+    mapM_ (spawnIrcPlugin) (ircConfigs config)
+  where
+    spawnIrcPlugin :: IrcConfig -> Bot ()
+    spawnIrcPlugin config = do
+        bot <- get
+        let chan  = botChan bot
+        pchan <- liftIO (newChan :: IO (Chan BotMsg))
+        threadId <- liftIO $ forkIO (startIrcbot config chan pchan)
+        let plugin  = PluginState { pluginName    = ircConfigName config
+                                  , pluginChan    = pchan
+                                  , pluginHandles = M.empty }
+            plugins = botPlugins bot
+        put $ bot { botPlugins = M.insert (pluginName plugin) (plugin, threadId) plugins }
 

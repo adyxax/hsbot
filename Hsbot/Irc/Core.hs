@@ -19,7 +19,7 @@ import Hsbot.Irc.Message
 import Hsbot.Irc.Plugin
 import Hsbot.Irc.Server
 import Hsbot.Irc.Types
-import Hsbot.Message
+import Hsbot.Types
 
 -- | IrcBot's main entry point
 startIrcbot :: IrcConfig -> Chan BotMsg -> Chan BotMsg -> IO ()

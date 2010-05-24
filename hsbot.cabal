@@ -54,6 +54,8 @@ Library
                  Hsbot.Irc.Types
                  Hsbot.Message
                  Hsbot.Plugin
+                 Hsbot.PluginUtils
+                 Hsbot.Types
   ghc-options: -Wall
   extensions: DeriveDataTypeable ScopedTypeVariables
   build-depends: base >= 4.1,
