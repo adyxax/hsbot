@@ -2,6 +2,7 @@
 
 * Handle bot/Plugin state updates threw the masters' Chans
 * Find a way to handle bot reloading threw exec
+* Find a way to cleanly handle termination/reboot requests (signals, IOExceptions, plugins' requests)
 
 * write the vote system for the quote module
 * only the quote reporter should be able to edit it

@@ -1,7 +1,10 @@
 module Hsbot.Message
     ( BotMsg (..)
     , Msg (..)
+    , processInternalMessage
     ) where
+
+import Hsbot.PluginUtils
 
 -- | A hsbot message
 data Msg = Msg

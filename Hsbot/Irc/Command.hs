@@ -36,7 +36,7 @@ unregisterCommand cmd pluginName' = do
 -- | Processes an internal command
 processInternalCommand :: IrcBotMsg -> IrcBot ()
 processInternalCommand (IntIrcCmd ircCmd)
-  | ircCmdTo ircCmd == "CORE" = processCoreCommand ircCmd
+  | ircCmdTo ircCmd == "CORE"   = processCoreCommand ircCmd
   | otherwise = do
       plugins <- gets ircBotPlugins
       case M.lookup (ircCmdTo ircCmd) plugins of
@@ -52,8 +52,18 @@ processCoreCommand ircCmd = do
     case command' of
         "LIST"       -> listPlugins originalRequest (ircCmdFrom ircCmd)
         "LOAD"       -> loadIrcPlugin $ ircCmdMsg ircCmd
-        "UNLOAD"     -> unloadPlugin $ ircCmdMsg ircCmd
+        "UNLOAD"     -> unloadIrcPlugin $ ircCmdMsg ircCmd
+        "UPDATE"     -> processUpdateCommand ircCmd
         "REGISTER"   -> registerCommand (ircCmdMsg ircCmd) (ircCmdFrom ircCmd)
         "UNREGISTER" -> unregisterCommand (ircCmdMsg ircCmd) (ircCmdFrom ircCmd)
         _            -> return ()
+
+-- | Process an update command
+processUpdateCommand :: IrcCmd -> IrcBot ()
+processUpdateCommand ircCmd = do
+    ircbot <- get
+    let oldData = ircBotResumeData ircbot
+        from    = ircCmdFrom ircCmd
+        stuff   = ircCmdMsg ircCmd
+    put $ ircbot { ircBotResumeData = M.insert from stuff oldData }
 

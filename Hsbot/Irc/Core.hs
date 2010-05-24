@@ -11,6 +11,7 @@ import Data.Time
 import Network
 import Prelude hiding (catch)
 import System.IO
+import System.Posix.IO (handleToFd)
 
 import Hsbot.Irc.Command
 import Hsbot.Irc.Config
@@ -18,7 +19,7 @@ import Hsbot.Irc.Message
 import Hsbot.Irc.Plugin
 import Hsbot.Irc.Server
 import Hsbot.Irc.Types
-import Hsbot.Message (BotMsg)
+import Hsbot.Message
 
 -- | IrcBot's main entry point
 startIrcbot :: IrcConfig -> Chan BotMsg -> Chan BotMsg -> IO ()
@@ -29,8 +30,9 @@ startIrcbot config masterChan myChan = do
     putStrLn $ concat ["[IrcBot] Connecting to ", ircConfigAddress config, "... "]
     handle <- connectTo (ircConfigAddress config) (ircConfigPort config)
     hSetBuffering handle NoBuffering
-    myOwnThreadId <- myThreadId
+    fd <- handleToFd handle
     putStrLn "[IrcBot] Spawning reader threads..."
+    myOwnThreadId  <- myThreadId
     readerThreadId <- forkIO $ ircBotReader handle chan myOwnThreadId
     masterReaderThreadId <- forkIO $ ircBotMasterReader masterChan chan
     putStrLn "[IrcBot] Initializing server connection..."
@@ -49,10 +51,13 @@ startIrcbot config masterChan myChan = do
                                   , ircBotHandle               = handle
                                   , ircBotConfig               = config
                                   , ircBotReaderThreadId       = readerThreadId
-                                  , ircBotMasterReaderThreadId = masterReaderThreadId }
+                                  , ircBotMasterReaderThreadId = masterReaderThreadId
+                                  , ircBotResumeData           = M.singleton "HANDLE" (show fd) }
     ircBotState' <- execStateT (initBotServerConnection config) ircBotState
-    putStrLn "[IrcBot] Entering main loop... "
-    _ <- ircBotLoop ircBotState' `catch` (\(_ :: IOException) -> return ())
+    putStrLn "[IrcBot] Spawning plugins..."
+    ircBotState'' <- execStateT spawnIrcPlugins ircBotState'
+    putStrLn "[IrcBot] Entering Core loop... "
+    _ <- (execStateT ircBotLoop ircBotState'') `catch` (\(_ :: IOException) -> return (ircBotState''))
     return ()
 
 --resumeIrcBot
@@ -89,28 +94,17 @@ initBotServerConnection config = do
     ircServerState' <- execStateT (initServerConnection config) ircServerState
     put $ ircBot { ircBotServerState = ircServerState' }
 
--- | IrcBot's loop that can catch ircbot's states' updates
-ircBotLoop :: IrcBotState -> IO ()
-ircBotLoop ircBotState = do
-    putStrLn "[IrcBot] Spawning plugins..."
-    ircBotState' <- execStateT spawnIrcPlugins ircBotState
-    -- Todo : throw new ircbotstate to hsbot
-    putStrLn "[IrcBot] Entering Core loop... "
-    _ <- (execStateT ircBotCore ircBotState') -- `catch` (\(_ :: NewBotStateException) -> return ircBotState')
-    return ()
-    -- TODO : loop!
-
 -- | Run the IrcBot's main loop
-ircBotCore :: IrcBot ()
-ircBotCore = forever $ do
-    ircBot <- get
-    let chan = ircBotChan ircBot
+ircBotLoop :: IrcBot ()
+ircBotLoop = forever $ do
+    chan <- gets ircBotChan
     msg  <- liftIO $ readChan chan
     case msg of
         InIrcMsg inIrcMsg   -> dispatchMessage $ InIrcMsg inIrcMsg
         OutIrcMsg outIrcMsg -> sendThisMessage outIrcMsg
         IntIrcCmd intIrcCmd -> do
             processInternalCommand $ IntIrcCmd intIrcCmd
+            reportUpdate
   where
     sendThisMessage :: IrcMsg -> IrcBot ()
     sendThisMessage outputMsg = do
@@ -142,4 +136,16 @@ dispatchMessage (InIrcMsg inIrcMsg) = do
     getMsgContent :: String
     getMsgContent = unwords . tail $ ircMsgParameters inIrcMsg
 dispatchMessage _ = return ()
+
+-- | Reports an update to the master bot
+reportUpdate :: IrcBot ()
+reportUpdate = do
+    ircbot <- get
+    let masterChan = ircBotMasterChan ircbot
+        msg        = IntMsg $ Msg { msgType = "UPDATE"
+                                  , msgFrom = ircConfigName $ ircBotConfig ircbot
+                                  , msgTo   = "CORE"
+                                  , msgCmd  = show $ ircBotResumeData ircbot
+                                  }
+    liftIO $ writeChan masterChan msg
 

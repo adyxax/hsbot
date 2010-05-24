@@ -5,7 +5,7 @@ module Hsbot.Irc.Plugin
     , loadIrcPlugin
     , sendToPlugin
     , spawnIrcPlugins
-    , unloadPlugin
+    , unloadIrcPlugin
     ) where
 
 import Control.Concurrent
@@ -45,16 +45,20 @@ loadIrcPlugin pluginName = do
                         "Ping"  -> ircBotPluginPing
                         "Quote" -> ircBotPluginQuote
                         _       -> ircBotPluginDummy
-    let oldPlugins = ircBotPlugins ircbot
+    let oldPlugins    = ircBotPlugins ircbot
+        oldResumeData = ircBotResumeData ircbot
     -- We check for unicity
     case M.lookup pluginName oldPlugins of
         Just _  -> return ()
         Nothing -> do
             threadId <- liftIO $ forkIO (entryPoint pluginChan masterChan)
-            let plugin  = IrcPluginState { ircPluginName       = pluginName
-                                         , ircPluginChan       = pluginChan
-                                         , ircPluginMasterChan = masterChan }
-            put $ ircbot { ircBotPlugins = M.insert pluginName (plugin, threadId) oldPlugins }
+            let plugin        = IrcPluginState { ircPluginName       = pluginName
+                                               , ircPluginChan       = pluginChan
+                                               , ircPluginMasterChan = masterChan }
+                newPlugins    = M.insert pluginName (plugin, threadId) oldPlugins
+                newResumeData = M.insert "PLUGINS" (show $ M.keys newPlugins) oldResumeData
+            put $ ircbot { ircBotPlugins    = newPlugins
+                         , ircBotResumeData = newResumeData }
 
 -- | Sends a list of loaded plugins
 listPlugins :: IrcMsg -> String -> IrcBot ()
@@ -66,14 +70,18 @@ listPlugins originalRequest dest = do
         Nothing          -> return ()
 
 -- | Unloads a plugin
-unloadPlugin :: String -> IrcBot ()
-unloadPlugin name = do
-    bot <- get
-    let oldPlugins = ircBotPlugins bot
+unloadIrcPlugin :: String -> IrcBot ()
+unloadIrcPlugin name = do
+    ircbot <- get
+    let oldPlugins    = ircBotPlugins ircbot
+        oldResumeData = ircBotResumeData ircbot
+    -- We check if the plugin exists
     case M.lookup name oldPlugins of
         Just (_, threadId) -> do
-            let newPlugins = M.delete name oldPlugins
+            let newPlugins    = M.delete name oldPlugins
+                newResumeData = M.insert "PLUGINS" (show $ M.keys newPlugins) oldResumeData
             liftIO $ throwTo threadId UserInterrupt
-            put $ bot { ircBotPlugins = newPlugins }
+            put $ ircbot { ircBotPlugins = newPlugins
+                         , ircBotResumeData = newResumeData }
         Nothing     -> return ()
 
