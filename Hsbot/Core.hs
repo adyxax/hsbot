@@ -2,8 +2,8 @@ module Hsbot.Core
     ( hsbot
     ) where
 
-import Control.Concurrent
-import Control.Concurrent.Chan ()
+import Control.Concurrent.Chan
+import Control.Concurrent.MVar
 import Control.Exception
 import Control.Monad.State
 import qualified Data.Map as M
@@ -22,54 +22,46 @@ hsbot config = do
     startTime <- getCurrentTime
     putStrLn "[Hsbot] Opening communication channel... "
     chan <- newChan :: IO (Chan BotMsg)
-    putStrLn "[Hsbot] Spawning bot state manager... "
-    processUpdateChan <- newChan :: IO (Chan String)
-    reportUpdateChan  <- newChan :: IO (Chan String)
-    updaterThreadId <- forkIO $ readUpdates processUpdateChan reportUpdateChan ""
+    mvar <- newMVar "" :: IO (MVar String)
     putStrLn "[Hsbot] Spawning IrcBot plugins... "
     botState <- execStateT spawnIrcPlugins BotState { botStartTime  = startTime
                                                     , botPlugins    = M.empty
                                                     , botChan       = chan
                                                     , botConfig     = config
-                                                    , botUpdateChan = processUpdateChan
+                                                    , botMVar       = mvar
                                                     , botResumeData = M.empty }
     putStrLn "[Hsbot] Entering main loop... "
-    _ <- (execStateT botLoop botState) `catch` (\(_ :: IOException) -> return botState)
-    killThread updaterThreadId
-    resumeData <- readChan reportUpdateChan
+    (reboot, botState') <- (runStateT botLoop botState) `catch` (\(_ :: IOException) -> return (False, botState))
+    resumeData <- takeMVar mvar
+    if reboot
+      then resumeHsbot botState' resumeData
+      else return ()
+
+resumeHsbot :: BotState -> String -> IO ()
+resumeHsbot botState resumeData = do
     print resumeData
-    return ()
 
 -- | Run the bot main loop
-botLoop :: Bot ()
-botLoop = forever $ do
+botLoop :: Bot (Bool)
+botLoop = do
     chan <- gets botChan
     msg  <- liftIO $ readChan chan
     case msg of
-        InMsg  _      -> return ()
-        OutMsg _      -> return ()
+        InMsg  _      -> botLoop
+        OutMsg _      -> botLoop
         IntMsg intMsg -> do
-            processInternalMessage $ IntMsg intMsg
+            reboot <- processInternalMessage $ IntMsg intMsg
             reportUpdate
+            if not reboot
+              then botLoop
+              else return (True)
 
 -- | Reports an update to the master bot
 reportUpdate :: Bot ()
 reportUpdate = do
     bot <- get
-    let updateChan = botUpdateChan bot
-        stuff      = show $ botResumeData bot
-    liftIO $ writeChan updateChan stuff
-
--- | Runs bot updates' manager thread
-readUpdates :: Chan String -> Chan String -> String -> IO ()
-readUpdates processChan reportChan resumeData = do
-    resumeData' <- (readChan processChan) `catch` handleException
-    readUpdates processChan reportChan resumeData'
-  where
-    handleException :: AsyncException -> IO (String)
-    handleException _ = do
-        writeChan reportChan resumeData
-        myId <- myThreadId
-        killThread myId
-        return ""
+    let mvar  = botMVar bot
+        stuff = show $ botResumeData bot
+    _ <- liftIO $ swapMVar mvar stuff
+    return ()
 

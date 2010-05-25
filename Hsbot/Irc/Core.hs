@@ -57,7 +57,7 @@ startIrcbot config masterChan myChan = do
     putStrLn "[IrcBot] Spawning plugins..."
     ircBotState'' <- execStateT spawnIrcPlugins ircBotState'
     putStrLn "[IrcBot] Entering Core loop... "
-    _ <- (execStateT ircBotLoop ircBotState'') `catch` (\(_ :: IOException) -> return (ircBotState''))
+    (evalStateT ircBotLoop ircBotState'') `catch` (\(_ :: IOException) -> return ())
     return ()
 
 --resumeIrcBot
@@ -103,8 +103,11 @@ ircBotLoop = forever $ do
         InIrcMsg inIrcMsg   -> dispatchMessage $ InIrcMsg inIrcMsg
         OutIrcMsg outIrcMsg -> sendThisMessage outIrcMsg
         IntIrcCmd intIrcCmd -> do
-            processInternalCommand $ IntIrcCmd intIrcCmd
+            reboot <- processInternalCommand $ IntIrcCmd intIrcCmd
             reportUpdate
+            if reboot
+              then processRebootCommand
+              else return ()
   where
     sendThisMessage :: IrcMsg -> IrcBot ()
     sendThisMessage outputMsg = do
@@ -142,10 +145,22 @@ reportUpdate :: IrcBot ()
 reportUpdate = do
     ircbot <- get
     let masterChan = ircBotMasterChan ircbot
-        msg        = IntMsg $ Msg { msgType = "UPDATE"
-                                  , msgFrom = ircConfigName $ ircBotConfig ircbot
-                                  , msgTo   = "CORE"
-                                  , msgCmd  = show $ ircBotResumeData ircbot
-                                  }
+        msg = IntMsg $ Msg { msgType  = "UPDATE"
+                           , msgFrom  = ircConfigName $ ircBotConfig ircbot
+                           , msgTo    = "CORE"
+                           , msgStuff = show $ ircBotResumeData ircbot
+                           }
+    liftIO $ writeChan masterChan msg
+
+-- | Process a reboot command
+processRebootCommand :: IrcBot ()
+processRebootCommand = do
+    ircbot <- get
+    let masterChan = ircBotMasterChan ircbot
+        msg = IntMsg $ Msg { msgType  = "REBOOT"
+                           , msgFrom  = ircConfigName $ ircBotConfig ircbot
+                           , msgTo    = "CORE"
+                           , msgStuff = show $ ircBotResumeData ircbot
+                           }
     liftIO $ writeChan masterChan msg
 

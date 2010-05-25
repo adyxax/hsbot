@@ -34,7 +34,7 @@ unregisterCommand cmd pluginName' = do
     put $ ircBot { ircBotCommands = newCmds }
 
 -- | Processes an internal command
-processInternalCommand :: IrcBotMsg -> IrcBot ()
+processInternalCommand :: IrcBotMsg -> IrcBot (Bool)
 processInternalCommand (IntIrcCmd ircCmd)
   | ircCmdTo ircCmd == "CORE"   = processCoreCommand ircCmd
   | otherwise = do
@@ -42,21 +42,23 @@ processInternalCommand (IntIrcCmd ircCmd)
       case M.lookup (ircCmdTo ircCmd) plugins of
           Just (plugin, _) -> sendToPlugin (IntIrcCmd ircCmd) plugin
           Nothing          -> return ()
-processInternalCommand _ = return ()
+      return False
+processInternalCommand _ = return (False)
 
 -- | Processes a core command
-processCoreCommand :: IrcCmd -> IrcBot ()
+processCoreCommand :: IrcCmd -> IrcBot (Bool)
 processCoreCommand ircCmd = do
     let command' = ircCmdCmd ircCmd
         originalRequest = ircCmdBotMsg ircCmd
     case command' of
         "LIST"       -> listPlugins originalRequest (ircCmdFrom ircCmd)
         "LOAD"       -> loadIrcPlugin $ ircCmdMsg ircCmd
-        "UNLOAD"     -> unloadIrcPlugin $ ircCmdMsg ircCmd
-        "UPDATE"     -> processUpdateCommand ircCmd
         "REGISTER"   -> registerCommand (ircCmdMsg ircCmd) (ircCmdFrom ircCmd)
+        "UNLOAD"     -> unloadIrcPlugin $ ircCmdMsg ircCmd
         "UNREGISTER" -> unregisterCommand (ircCmdMsg ircCmd) (ircCmdFrom ircCmd)
+        "UPDATE"     -> processUpdateCommand ircCmd
         _            -> return ()
+    return $ command' == "REBOOT"
 
 -- | Process an update command
 processUpdateCommand :: IrcCmd -> IrcBot ()

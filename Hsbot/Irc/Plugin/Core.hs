@@ -16,9 +16,9 @@ ircBotPluginCore myChan masterChan = do
     let plugin = IrcPluginState { ircPluginName       = "Core"
                                 , ircPluginChan       = myChan
                                 , ircPluginMasterChan = masterChan }
-    evalStateT (mapM_ sendRegisterCommand ["list", "load", "reload", "unload"]) plugin
+    evalStateT (mapM_ sendRegisterCommand ["list", "load", "reload", "unload", "reboot"]) plugin
     plugin' <- (execStateT run plugin) `catch` (\(_ :: AsyncException) -> return plugin)
-    evalStateT (mapM_ sendUnregisterCommand ["list", "load", "reload", "unload"]) plugin'
+    evalStateT (mapM_ sendUnregisterCommand ["list", "load", "reload", "unload", "reboot"]) plugin'
 
 -- | The IrcPlugin monad main function
 run :: IrcPlugin ()
@@ -36,6 +36,7 @@ run = forever $ do
                             "load"   -> loadPlugin $ tail stuff
                             "reload" -> reloadPlugin $ tail stuff
                             "unload" -> unloadPlugin $ tail stuff
+                            "reboot" -> rebootBot $ tail stuff
                             _        -> return () -- TODO : help message
             "ANSWER" -> let stuff = ircCmdMsg intCmd
                         in answerMsg request ("Loaded plugins : " ++ stuff)
@@ -58,4 +59,8 @@ reloadPlugin pluginNames = mapM_ (sendCommand "RELOAD" "CORE") pluginNames
 -- | The unload command
 unloadPlugin :: [String] -> IrcPlugin ()
 unloadPlugin pluginNames = mapM_ (sendCommand "UNLOAD" "CORE") pluginNames
+
+-- | The reboot command
+rebootBot :: [String] -> IrcPlugin ()
+rebootBot stuff = sendCommand "REBOOT" "CORE" $ unwords stuff
 

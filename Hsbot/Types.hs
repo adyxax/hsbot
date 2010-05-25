@@ -24,7 +24,7 @@ data BotState = BotState
     , botPlugins    :: M.Map String (PluginState, ThreadId) -- Loaded plugins
     , botChan       :: Chan BotMsg  -- the bot's communication channel
     , botConfig     :: Config       -- the bot's starting config
-    , botUpdateChan :: Chan String  -- the bot's chan to report updates on
+    , botMVar       :: MVar String  -- the place where to put resume data
     , botResumeData :: M.Map String String  -- the necessary data to resume the bot's operations on reboot
     }
 
@@ -40,10 +40,10 @@ data PluginState = PluginState
 
 -- | A hsbot message
 data Msg = Msg
-    { msgType :: String -- the message type
-    , msgFrom :: String -- who issues it
-    , msgTo   :: String -- who it is destinated to
-    , msgCmd  :: String -- the message to be transfered
+    { msgType  :: String -- the message type
+    , msgFrom  :: String -- who issues it
+    , msgTo    :: String -- who it is destinated to
+    , msgStuff :: String -- the message to be transfered
     } deriving (Show)
 
 data BotMsg = InMsg Msg | OutMsg Msg | IntMsg Msg deriving (Show)

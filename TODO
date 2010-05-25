@@ -1,5 +1,6 @@
 :julien!~julien@ogu21.corp PRIVMSG #shbot :@quote graou snif
 
+* Handle clean termination of all thread on reboot
 * Find a way to handle bot reloading threw exec
 * Find a way to cleanly handle termination/reboot requests (signals, IOExceptions, plugins' requests)
 
