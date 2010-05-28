@@ -22,46 +22,48 @@ hsbot config = do
     startTime <- getCurrentTime
     putStrLn "[Hsbot] Opening communication channel... "
     chan <- newChan :: IO (Chan BotMsg)
-    mvar <- newMVar "" :: IO (MVar String)
+    mvar <- newMVar M.empty :: IO (MVar BotResumeData)
     putStrLn "[Hsbot] Spawning IrcBot plugins... "
     botState <- execStateT spawnIrcPlugins BotState { botStartTime  = startTime
                                                     , botPlugins    = M.empty
                                                     , botChan       = chan
                                                     , botConfig     = config
-                                                    , botMVar       = mvar
-                                                    , botResumeData = M.empty }
+                                                    , botResumeData = mvar }
     putStrLn "[Hsbot] Entering main loop... "
-    (reboot, botState') <- (runStateT botLoop botState) `catch` (\(_ :: IOException) -> return (False, botState))
+    (status, botState') <- runLoop botState
     resumeData <- takeMVar mvar
-    if reboot
+    if status == BotReboot
       then resumeHsbot botState' resumeData
       else return ()
+  where
+    runLoop :: BotState -> IO (BotStatus, BotState)
+    runLoop botState = do
+        (status, botState') <- (runStateT botCore botState) `catch` (\(_ :: IOException) -> return (BotExit, botState))
+        case status of
+            BotContinue -> runLoop botState'
+            _           -> return (status, botState')
 
-resumeHsbot :: BotState -> String -> IO ()
+resumeHsbot :: BotState -> BotResumeData -> IO ()
 resumeHsbot botState resumeData = do
     print resumeData
 
 -- | Run the bot main loop
-botLoop :: Bot (Bool)
-botLoop = do
+botCore :: Bot (BotStatus)
+botCore = do
     chan <- gets botChan
     msg  <- liftIO $ readChan chan
     case msg of
-        InMsg  _      -> botLoop
-        OutMsg _      -> botLoop
-        IntMsg intMsg -> do
-            reboot <- processInternalMessage $ IntMsg intMsg
-            reportUpdate
-            if not reboot
-              then botLoop
-              else return (True)
+        InMsg  _      -> return BotContinue
+        OutMsg _      -> return BotContinue
+        IntMsg intMsg -> processInternalMessage $ IntMsg intMsg
+        UpdMsg updMsg -> processUpdateMessage updMsg
 
--- | Reports an update to the master bot
-reportUpdate :: Bot ()
-reportUpdate = do
-    bot <- get
-    let mvar  = botMVar bot
-        stuff = show $ botResumeData bot
-    _ <- liftIO $ swapMVar mvar stuff
-    return ()
+-- | Process an update command
+processUpdateMessage :: ResumeMsg -> Bot (BotStatus)
+processUpdateMessage msg = do
+    resumeData <- gets botResumeData
+    let from  = resMsgFrom msg
+        stuff = resMsgData msg
+    liftIO $ modifyMVar_ resumeData (\oldData -> return $ M.insert from stuff oldData)
+    return BotContinue
 

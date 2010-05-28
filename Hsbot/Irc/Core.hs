@@ -145,11 +145,8 @@ reportUpdate :: IrcBot ()
 reportUpdate = do
     ircbot <- get
     let masterChan = ircBotMasterChan ircbot
-        msg = IntMsg $ Msg { msgType  = "UPDATE"
-                           , msgFrom  = ircConfigName $ ircBotConfig ircbot
-                           , msgTo    = "CORE"
-                           , msgStuff = show $ ircBotResumeData ircbot
-                           }
+        msg = UpdMsg $ ResMsg { resMsgFrom = ircConfigName $ ircBotConfig ircbot
+                              , resMsgData = ircBotResumeData ircbot }
     liftIO $ writeChan masterChan msg
 
 -- | Process a reboot command

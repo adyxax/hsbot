@@ -1,10 +1,14 @@
 module Hsbot.Types
     ( Bot
     , BotMsg (..)
+    , BotResumeData
     , BotState (..)
+    , BotStatus (..)
     , Msg (..)
     , Plugin
     , PluginState (..)
+    , ResumeData
+    , ResumeMsg (..)
     ) where
 
 import Control.Concurrent
@@ -24,9 +28,15 @@ data BotState = BotState
     , botPlugins    :: M.Map String (PluginState, ThreadId) -- Loaded plugins
     , botChan       :: Chan BotMsg  -- the bot's communication channel
     , botConfig     :: Config       -- the bot's starting config
-    , botMVar       :: MVar String  -- the place where to put resume data
-    , botResumeData :: M.Map String String  -- the necessary data to resume the bot's operations on reboot
+    , botResumeData :: MVar BotResumeData   -- the necessary data to resume the bot's operations on reboot
     }
+
+-- | how we exit from the botLoop
+data BotStatus = BotExit | BotReboot | BotContinue deriving (Eq)
+
+-- | Types to factorise resume data
+type ResumeData    = M.Map String String
+type BotResumeData = M.Map String ResumeData
 
 -- | The Plugin monad
 type Plugin = StateT PluginState IO
@@ -46,5 +56,10 @@ data Msg = Msg
     , msgStuff :: String -- the message to be transfered
     } deriving (Show)
 
-data BotMsg = InMsg Msg | OutMsg Msg | IntMsg Msg deriving (Show)
+data ResumeMsg = ResMsg
+    { resMsgFrom :: String
+    , resMsgData :: ResumeData
+    } deriving (Show)
+
+data BotMsg = InMsg Msg | OutMsg Msg | IntMsg Msg | UpdMsg ResumeMsg deriving (Show)
 

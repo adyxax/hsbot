@@ -9,7 +9,7 @@ import Hsbot.PluginUtils
 import Hsbot.Types
 
 -- | Processes an internal message
-processInternalMessage :: BotMsg -> Bot (Bool)
+processInternalMessage :: BotMsg -> Bot (BotStatus)
 processInternalMessage (IntMsg msg)
   | msgTo msg == "CORE" = processCoreMessage msg
   | otherwise = do
@@ -17,22 +17,12 @@ processInternalMessage (IntMsg msg)
       case M.lookup (msgTo msg) plugins of
           Just (plugin, _) -> sendToPlugin (IntMsg msg) plugin
           Nothing          -> return ()
-      return False
-processInternalMessage _ = return (False)
+      return BotContinue
+processInternalMessage _ = return BotContinue
 
-processCoreMessage :: Msg -> Bot (Bool)
+processCoreMessage :: Msg -> Bot (BotStatus)
 processCoreMessage msg = do
     case msgType msg of
-        "UPDATE" -> processUpdateCommand msg
-        _        -> return ()
-    return $ (msgType msg) == "REBOOT"
-
--- | Process an update command
-processUpdateCommand :: Msg -> Bot ()
-processUpdateCommand msg = do
-    bot <- get
-    let oldData = botResumeData bot
-        from    = msgFrom msg
-        stuff   = msgStuff msg
-    put $ bot { botResumeData = M.insert from stuff oldData }
+        "REBOOT" -> return BotReboot
+        _        -> return BotContinue
 

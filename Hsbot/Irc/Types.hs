@@ -32,7 +32,7 @@ data IrcBotState = IrcBotState
     , ircBotConfig               :: IrcConfig               -- The starting configuration
     , ircBotReaderThreadId       :: ThreadId                -- the thread that process inputs from the socket
     , ircBotMasterReaderThreadId :: ThreadId                -- the thread that process inputs from the master bot
-    , ircBotResumeData           :: M.Map String String     -- the necessary data to resume the bot's operations on reboot
+    , ircBotResumeData           :: ResumeData              -- the necessary data to resume the bot's operations on reboot
     }
 
 -- | The IrcServer monad
