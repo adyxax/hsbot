@@ -1,6 +1,7 @@
 module Hsbot.Irc.Plugin
     ( IrcPlugin
     , IrcPluginState (..)
+    , killIrcPlugin
     , listPlugins
     , loadIrcPlugin
     , sendToPlugin
@@ -72,16 +73,23 @@ listPlugins originalRequest dest = do
 -- | Unloads a plugin
 unloadIrcPlugin :: String -> IrcBot ()
 unloadIrcPlugin name = do
+    killIrcPlugin name
     ircbot <- get
-    let oldPlugins    = ircBotPlugins ircbot
-        oldResumeData = ircBotResumeData ircbot
+    let oldResumeData = ircBotResumeData ircbot
+        newPlugins    = M.keys $ ircBotPlugins ircbot
+        newResumeData = M.insert "PLUGINS" (show newPlugins) oldResumeData
+    put $ ircbot { ircBotResumeData = newResumeData }
+
+-- | kills a plugin
+killIrcPlugin :: String -> IrcBot ()
+killIrcPlugin name = do
+    ircbot <- get
+    let oldPlugins = ircBotPlugins ircbot
     -- We check if the plugin exists
     case M.lookup name oldPlugins of
         Just (_, threadId) -> do
-            let newPlugins    = M.delete name oldPlugins
-                newResumeData = M.insert "PLUGINS" (show $ M.keys newPlugins) oldResumeData
+            let newPlugins = M.delete name oldPlugins
             liftIO $ throwTo threadId UserInterrupt
-            put $ ircbot { ircBotPlugins = newPlugins
-                         , ircBotResumeData = newResumeData }
-        Nothing     -> return ()
+            put $ ircbot { ircBotPlugins = newPlugins }
+        Nothing            -> return ()
 

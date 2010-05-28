@@ -26,12 +26,9 @@ data IrcBotState = IrcBotState
     , ircBotCommands             :: M.Map String [String]   -- Loaded plugins
     , ircBotChan                 :: Chan IrcBotMsg          -- The IrcBot's communication channel
     , ircBotMasterChan           :: Chan BotMsg             -- The Hsbot communication channel
-    , ircBotMyChan               :: Chan BotMsg             -- The Hsbot communication channel
     , ircBotServerState          :: IrcServerState          -- The state of the IrcServer
     , ircBotHandle               :: Handle                  -- The server's socket/handle
     , ircBotConfig               :: IrcConfig               -- The starting configuration
-    , ircBotReaderThreadId       :: ThreadId                -- the thread that process inputs from the socket
-    , ircBotMasterReaderThreadId :: ThreadId                -- the thread that process inputs from the master bot
     , ircBotResumeData           :: ResumeData              -- the necessary data to resume the bot's operations on reboot
     }
 

@@ -31,9 +31,11 @@ hsbot config = do
                                                     , botResumeData = mvar }
     putStrLn "[Hsbot] Entering main loop... "
     (status, botState') <- runLoop botState
+    putStrLn "[Hsbot] Killing active plugins... "
     resumeData <- takeMVar mvar
+    evalStateT (mapM_ killPlugin $ M.keys resumeData) botState'
     if status == BotReboot
-      then resumeHsbot botState' resumeData
+      then resumeHsbot resumeData
       else return ()
   where
     runLoop :: BotState -> IO (BotStatus, BotState)
@@ -43,8 +45,8 @@ hsbot config = do
             BotContinue -> runLoop botState'
             _           -> return (status, botState')
 
-resumeHsbot :: BotState -> BotResumeData -> IO ()
-resumeHsbot botState resumeData = do
+resumeHsbot :: BotResumeData -> IO ()
+resumeHsbot resumeData = do
     print resumeData
 
 -- | Run the bot main loop

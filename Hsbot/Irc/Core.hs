@@ -3,7 +3,7 @@ module Hsbot.Irc.Core
     ) where
 
 import Control.Concurrent
-import Control.Exception (IOException, catch)
+import Control.Exception (AsyncException, Handler (..), IOException, catch, catches)
 import Control.Monad.State
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
@@ -34,7 +34,7 @@ startIrcbot config masterChan myChan = do
     putStrLn "[IrcBot] Spawning reader threads..."
     myOwnThreadId  <- myThreadId
     readerThreadId <- forkIO $ ircBotReader handle chan myOwnThreadId
-    masterReaderThreadId <- forkIO $ ircBotMasterReader masterChan chan
+    masterReaderThreadId <- forkIO $ ircBotMasterReader myChan chan
     putStrLn "[IrcBot] Initializing server connection..."
     let ircServerState = IrcServerState { ircServerId            = ircConfigAddress config
                                         , ircServerChannels      = []
@@ -46,18 +46,23 @@ startIrcbot config masterChan myChan = do
                                   , ircBotCommands             = M.empty
                                   , ircBotChan                 = chan
                                   , ircBotMasterChan           = masterChan
-                                  , ircBotMyChan               = myChan
                                   , ircBotServerState          = ircServerState
                                   , ircBotHandle               = handle
                                   , ircBotConfig               = config
-                                  , ircBotReaderThreadId       = readerThreadId
-                                  , ircBotMasterReaderThreadId = masterReaderThreadId
                                   , ircBotResumeData           = M.singleton "HANDLE" (show fd) }
     ircBotState' <- execStateT (initBotServerConnection config) ircBotState
     putStrLn "[IrcBot] Spawning plugins..."
     ircBotState'' <- execStateT spawnIrcPlugins ircBotState'
     putStrLn "[IrcBot] Entering Core loop... "
-    (evalStateT ircBotLoop ircBotState'') `catch` (\(_ :: IOException) -> return ())
+    ircBotState''' <- (execStateT ircBotLoop ircBotState'') `catches` [ Handler (\ (_ :: IOException) -> return (ircBotState''))
+                                                                      , Handler (\ (_ :: AsyncException) -> return (ircBotState'')) ]
+    putStrLn "[IrcBot] Killing reader threads..."
+    killThread readerThreadId
+    killThread masterReaderThreadId
+    putStrLn "[IrcBot] Killing active plugins... "
+    let resumeData = ircBotResumeData ircBotState'''
+        ircPlugins = read (fromMaybe [] (M.lookup "PLUGINS" resumeData)) :: [String]
+    evalStateT (mapM_ killIrcPlugin ircPlugins) ircBotState'''
     return ()
 
 --resumeIrcBot
