@@ -17,18 +17,18 @@ import Hsbot.Plugin
 import Hsbot.Types
 
 -- | Bot's main entry point
-hsbot :: Config -> IO ()
+hsbot :: [BotConfig] -> IO ()
 hsbot config = do
     startTime <- getCurrentTime
     putStrLn "[Hsbot] Opening communication channel... "
     chan <- newChan :: IO (Chan BotMsg)
     mvar <- newMVar M.empty :: IO (MVar BotResumeData)
     putStrLn "[Hsbot] Spawning IrcBot plugins... "
-    botState <- execStateT spawnIrcPlugins BotState { botStartTime  = startTime
-                                                    , botPlugins    = M.empty
-                                                    , botChan       = chan
-                                                    , botConfig     = config
-                                                    , botResumeData = mvar }
+    botState <- execStateT spawnPlugins BotState { botStartTime  = startTime
+                                                 , botPlugins    = M.empty
+                                                 , botChan       = chan
+                                                 , botConfig     = config
+                                                 , botResumeData = mvar }
     putStrLn "[Hsbot] Entering main loop... "
     (status, botState') <- runLoop botState
     putStrLn "[Hsbot] Killing active plugins... "

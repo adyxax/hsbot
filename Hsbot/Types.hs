@@ -27,7 +27,7 @@ data BotState = BotState
     { botStartTime  :: UTCTime      -- the bot's uptime
     , botPlugins    :: M.Map String (PluginState, ThreadId) -- Loaded plugins
     , botChan       :: Chan BotMsg  -- the bot's communication channel
-    , botConfig     :: Config       -- the bot's starting config
+    , botConfig     :: [BotConfig]  -- the bot's starting config
     , botResumeData :: MVar BotResumeData   -- the necessary data to resume the bot's operations on reboot
     }
 

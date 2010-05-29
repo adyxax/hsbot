@@ -1,7 +1,7 @@
 module Hsbot.Plugin
     ( killPlugin
-    , spawnIrcPlugins
-    , spawnIrcPlugin
+    , spawnPlugins
+    , spawnPlugin
     , unloadPlugin
     ) where
 
@@ -17,24 +17,26 @@ import Hsbot.Irc.Config
 import Hsbot.Irc.Core
 import Hsbot.Types
 
--- | spawns IrcPlugins
-spawnIrcPlugins :: Bot ()
-spawnIrcPlugins = do
+-- | spawns plugins
+spawnPlugins :: Bot ()
+spawnPlugins = do
     config <- gets botConfig
-    mapM_ (spawnIrcPlugin) (ircConfigs config)
+    mapM_ (spawnPlugin) config
 
--- | spawns a single irc plugin
-spawnIrcPlugin :: IrcConfig -> Bot ()
-spawnIrcPlugin config = do
+-- | spawns a single plugin
+spawnPlugin :: BotConfig -> Bot ()
+spawnPlugin (IrcBotConfig ircConfig) = do
     bot <- get
     let chan  = botChan bot
     pchan <- liftIO (newChan :: IO (Chan BotMsg))
-    threadId <- liftIO $ forkIO (startIrcbot config chan pchan)
-    let plugin  = PluginState { pluginName    = ircConfigName config
+    threadId <- liftIO $ forkIO (startIrcbot ircConfig chan pchan)
+    let plugin  = PluginState { pluginName    = ircConfigName ircConfig
                               , pluginChan    = pchan
                               , pluginHandles = M.empty }
         plugins = botPlugins bot
     put $ bot { botPlugins = M.insert (pluginName plugin) (plugin, threadId) plugins }
+    resumeData <- gets botResumeData
+    liftIO $ modifyMVar_ resumeData (\oldData -> return $ M.insert (ircConfigName ircConfig) M.empty oldData)
 
 -- | Unloads a plugin
 unloadPlugin :: String -> Bot ()

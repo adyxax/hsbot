@@ -21,7 +21,7 @@ data IrcConfig = IrcConfig
 -- | User configuration
 ircDefaultConfig :: IrcConfig
 ircDefaultConfig = IrcConfig
-    { ircConfigName          = "localhost"
+    { ircConfigName          = "irc-alocalhost"
     , ircConfigAddress       = "localhost"
     , ircConfigPort          = PortNumber 6667
     , ircConfigChannels      = ["#hsbot"]

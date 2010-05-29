@@ -1,18 +1,9 @@
 module Hsbot.Config
-    ( Config(..)
-    , defaultConfig
+    ( BotConfig (..)
     ) where
 
-import Hsbot.Irc.Config (IrcConfig)
+import Hsbot.Irc.Config
 
 -- | Configuration data type
-data Config = Config
-    { ircConfigs :: [IrcConfig]
-    }
-
--- | User configuration
-defaultConfig :: Config
-defaultConfig = Config
-    { ircConfigs = []
-    }
+data BotConfig = IrcBotConfig IrcConfig
 
