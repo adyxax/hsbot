@@ -4,9 +4,11 @@ module Hsbot.Types
     , BotResumeData
     , BotState (..)
     , BotStatus (..)
+    , ExitMsg (..)
     , Msg (..)
     , Plugin
     , PluginState (..)
+    , RebootMsg (..)
     , ResumeData
     , ResumeMsg (..)
     ) where
@@ -61,5 +63,13 @@ data ResumeMsg = ResMsg
     , resMsgData :: ResumeData
     } deriving (Show)
 
-data BotMsg = InMsg Msg | OutMsg Msg | IntMsg Msg | UpdMsg ResumeMsg deriving (Show)
+data RebootMsg = RebootMsg
+    { rebMsgFrom :: String
+    } deriving (Show)
+
+data ExitMsg = ExitMsg
+    { exiMsgFrom :: String
+    } deriving (Show)
+
+data BotMsg = IntMsg Msg | UpdMsg ResumeMsg | RebMsg RebootMsg | ExiMsg ExitMsg deriving (Show)
 
