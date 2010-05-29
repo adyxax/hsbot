@@ -3,6 +3,7 @@ module Hsbot.Irc.Types
     , IrcBotState (..)
     , IrcServer
     , IrcServerState (..)
+    , first
     ) where
 
 import Control.Concurrent
@@ -22,7 +23,7 @@ type IrcBot = StateT IrcBotState IO
 -- | An Ircbot state
 data IrcBotState = IrcBotState
     { ircBotStartTime            :: UTCTime                 -- the bot's uptime
-    , ircBotPlugins              :: M.Map String (IrcPluginState, ThreadId) -- Loaded plugins
+    , ircBotPlugins              :: M.Map String (IrcPluginState, MVar (), ThreadId) -- Loaded plugins
     , ircBotCommands             :: M.Map String [String]   -- Loaded plugins
     , ircBotChan                 :: Chan IrcBotMsg          -- The IrcBot's communication channel
     , ircBotMasterChan           :: Chan BotMsg             -- The Hsbot communication channel
@@ -44,3 +45,6 @@ data IrcServerState = IrcServerState
     , ircServerChan          :: Chan IrcBotMsg -- the IrcBot channel
     }
 
+-- | Utilities for triplets
+first :: (a, b, c) -> a
+first (a, _, _) = a

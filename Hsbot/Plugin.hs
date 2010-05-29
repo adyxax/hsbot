@@ -5,8 +5,9 @@ module Hsbot.Plugin
     , unloadPlugin
     ) where
 
-import Control.Concurrent
-import Control.Concurrent.Chan ()
+import Control.Concurrent (forkIO)
+import Control.Concurrent.Chan
+import Control.Concurrent.MVar
 import Control.Exception
 import Control.Monad.State
 import qualified Data.Map as M
@@ -29,12 +30,13 @@ spawnPlugin (IrcBotConfig ircConfig) = do
     bot <- get
     let chan  = botChan bot
     pchan <- liftIO (newChan :: IO (Chan BotMsg))
-    threadId <- liftIO $ forkIO (startIrcbot ircConfig chan pchan)
+    mvar  <- liftIO newEmptyMVar
+    threadId <- liftIO . forkIO $ finally (startIrcbot ircConfig chan pchan) (putMVar mvar ())
     let plugin  = PluginState { pluginName    = ircConfigName ircConfig
                               , pluginChan    = pchan
                               , pluginHandles = M.empty }
         plugins = botPlugins bot
-    put $ bot { botPlugins = M.insert (pluginName plugin) (plugin, threadId) plugins }
+    put $ bot { botPlugins = M.insert (pluginName plugin) (plugin, mvar, threadId) plugins }
     resumeData <- gets botResumeData
     liftIO $ modifyMVar_ resumeData (\oldData -> return $ M.insert (ircConfigName ircConfig) M.empty oldData)
 
@@ -52,9 +54,10 @@ killPlugin name = do
     let oldPlugins = botPlugins bot
     -- We check if the plugin exists
     case M.lookup name oldPlugins of
-        Just (_, threadId) -> do
+        Just (_, mvar, threadId) -> do
             let newPlugins = M.delete name oldPlugins
             liftIO $ throwTo threadId UserInterrupt
             put $ bot { botPlugins = newPlugins }
+            liftIO $ takeMVar mvar
         Nothing            -> return ()
 

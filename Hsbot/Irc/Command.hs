@@ -12,6 +12,7 @@ import Data.Maybe
 import Hsbot.Irc.Message
 import Hsbot.Irc.Plugin
 import Hsbot.Irc.Types
+import Hsbot.Types
 
 -- | Registers a plugin's command
 registerCommand :: String -> String -> IrcBot ()
@@ -34,19 +35,19 @@ unregisterCommand cmd pluginName' = do
     put $ ircBot { ircBotCommands = newCmds }
 
 -- | Processes an internal command
-processInternalCommand :: IrcBotMsg -> IrcBot (Bool)
+processInternalCommand :: IrcBotMsg -> IrcBot (BotStatus)
 processInternalCommand (IntIrcCmd ircCmd)
   | ircCmdTo ircCmd == "CORE"   = processCoreCommand ircCmd
   | otherwise = do
       plugins <- gets ircBotPlugins
       case M.lookup (ircCmdTo ircCmd) plugins of
-          Just (plugin, _) -> sendToPlugin (IntIrcCmd ircCmd) plugin
+          Just (plugin, _, _) -> sendToPlugin (IntIrcCmd ircCmd) plugin
           Nothing          -> return ()
-      return False
-processInternalCommand _ = return (False)
+      return BotContinue
+processInternalCommand _ = return (BotContinue)
 
 -- | Processes a core command
-processCoreCommand :: IrcCmd -> IrcBot (Bool)
+processCoreCommand :: IrcCmd -> IrcBot (BotStatus)
 processCoreCommand ircCmd = do
     let command' = ircCmdCmd ircCmd
         originalRequest = ircCmdBotMsg ircCmd
@@ -58,7 +59,9 @@ processCoreCommand ircCmd = do
         "UNREGISTER" -> unregisterCommand (ircCmdMsg ircCmd) (ircCmdFrom ircCmd)
         "UPDATE"     -> processUpdateCommand ircCmd
         _            -> return ()
-    return $ command' == "REBOOT"
+    if command' == "REBOOT"
+      then return BotReboot
+      else return BotContinue
 
 -- | Process an update command
 processUpdateCommand :: IrcCmd -> IrcBot ()

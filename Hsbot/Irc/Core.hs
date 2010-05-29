@@ -110,7 +110,7 @@ ircBotLoop = forever $ do
         IntIrcCmd intIrcCmd -> do
             reboot <- processInternalCommand $ IntIrcCmd intIrcCmd
             reportUpdate
-            if reboot
+            if reboot == BotReboot
               then processRebootCommand
               else return ()
   where
@@ -131,9 +131,9 @@ dispatchMessage (InIrcMsg inIrcMsg) = do
         let key         = tail . head $ words getMsgContent
             pluginNames = fromMaybe [] $ M.lookup key cmds
             plugins'    = fromMaybe [] $ mapM (flip M.lookup plugins) pluginNames
-        in mapM_ (sendRunCommand (tail getMsgContent) . fst) plugins'
+        in mapM_ (sendRunCommand (tail getMsgContent) . first) plugins'
       else
-        mapM_ (sendToPlugin (InIrcMsg inIrcMsg) . fst) (M.elems plugins)
+        mapM_ (sendToPlugin (InIrcMsg inIrcMsg) . first) (M.elems plugins)
   where
     isPluginCommand :: IrcConfig -> Bool
     isPluginCommand config =

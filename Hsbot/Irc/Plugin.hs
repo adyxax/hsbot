@@ -52,11 +52,12 @@ loadIrcPlugin pluginName = do
     case M.lookup pluginName oldPlugins of
         Just _  -> return ()
         Nothing -> do
-            threadId <- liftIO $ forkIO (entryPoint pluginChan masterChan)
+            mvar <- liftIO newEmptyMVar
+            threadId <- liftIO . forkIO $ finally (entryPoint pluginChan masterChan) (putMVar mvar ())
             let plugin        = IrcPluginState { ircPluginName       = pluginName
                                                , ircPluginChan       = pluginChan
                                                , ircPluginMasterChan = masterChan }
-                newPlugins    = M.insert pluginName (plugin, threadId) oldPlugins
+                newPlugins    = M.insert pluginName (plugin, mvar, threadId) oldPlugins
                 newResumeData = M.insert "PLUGINS" (show $ M.keys newPlugins) oldResumeData
             put $ ircbot { ircBotPlugins    = newPlugins
                          , ircBotResumeData = newResumeData }
@@ -67,7 +68,7 @@ listPlugins originalRequest dest = do
     plugins <- gets ircBotPlugins
     let listing = unwords $ M.keys plugins
     case M.lookup dest plugins of
-        Just (plugin, _) -> sendToPlugin (IntIrcCmd $ IrcCmd "ANSWER" "CORE" dest listing originalRequest) plugin
+        Just (plugin, _, _) -> sendToPlugin (IntIrcCmd $ IrcCmd "ANSWER" "CORE" dest listing originalRequest) plugin
         Nothing          -> return ()
 
 -- | Unloads a plugin
@@ -87,9 +88,10 @@ killIrcPlugin name = do
     let oldPlugins = ircBotPlugins ircbot
     -- We check if the plugin exists
     case M.lookup name oldPlugins of
-        Just (_, threadId) -> do
+        Just (_, mvar, threadId) -> do
             let newPlugins = M.delete name oldPlugins
             liftIO $ throwTo threadId UserInterrupt
             put $ ircbot { ircBotPlugins = newPlugins }
+            liftIO $ takeMVar mvar
         Nothing            -> return ()
 
