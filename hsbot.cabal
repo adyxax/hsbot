@@ -1,5 +1,5 @@
 name: hsbot
-version: 0.1.0
+version: 0.2.1
 cabal-version: >= 1.8
 build-type: Simple
 license: BSD3
@@ -20,20 +20,10 @@ Executable hsbot
   Main-Is: Main.hs
   ghc-options: -Wall
   extensions: DeriveDataTypeable ScopedTypeVariables
-  build-depends: base >= 4.1,
-                 containers >= 0.3,
+  build-depends: base >= 4.1 && < 5,
                  directory >= 1.0,
                  filepath >= 1.1,
-                 ghc >= 6.12,
-                 haskell98 >= 1.0,
-                 mtl >= 1.1,
-                 network >= 2.2,
-                 old-time >= 1.0,
-                 parsec >= 3.1,
                  process >= 1.0,
-                 random >= 1.0,
-                 text >= 0.7,
-                 time >= 1.1,
                  unix >= 2.4
 
 Library
@@ -58,15 +48,13 @@ Library
                  Hsbot.Types
   ghc-options: -Wall
   extensions: DeriveDataTypeable ScopedTypeVariables
-  build-depends: base >= 4.1,
+  build-depends: base >= 4.1 && < 5,
                  containers >= 0.3,
                  directory >= 1.0,
                  filepath >= 1.1,
-                 ghc >= 6.12,
                  haskell98 >= 1.0,
                  mtl >= 1.1,
                  network >= 2.2,
-                 old-time >= 1.0,
                  parsec >= 3.1,
                  random >= 1.0,
                  text >= 0.7,

@@ -11,6 +11,7 @@ import Control.Concurrent.MVar
 import Control.Exception
 import Control.Monad.State
 import qualified Data.Map as M
+import Data.Maybe (fromMaybe)
 import Prelude hiding (catch)
 
 import Hsbot.Config
@@ -28,17 +29,20 @@ spawnPlugins = do
 spawnPlugin :: BotConfig -> Bot ()
 spawnPlugin (IrcBotConfig ircConfig) = do
     bot <- get
-    let chan  = botChan bot
+    let mvar = botResumeData bot
+        name = ircConfigName ircConfig
+    resumeData <- liftIO $ takeMVar mvar
+    let pluginResumeData = fromMaybe M.empty $ M.lookup name resumeData
+        chan = botChan bot
     pchan <- liftIO (newChan :: IO (Chan BotMsg))
-    mvar  <- liftIO newEmptyMVar
-    threadId <- liftIO . forkIO $ finally (startIrcbot ircConfig chan pchan) (putMVar mvar ())
-    let plugin  = PluginState { pluginName    = ircConfigName ircConfig
+    pluginMVar <- liftIO newEmptyMVar
+    threadId <- liftIO . forkIO $ finally (startIrcbot ircConfig chan pchan (Just $ show pluginResumeData)) (putMVar pluginMVar ())
+    let plugin  = PluginState { pluginName    = name
                               , pluginChan    = pchan
                               , pluginHandles = M.empty }
         plugins = botPlugins bot
-    put $ bot { botPlugins = M.insert (pluginName plugin) (plugin, mvar, threadId) plugins }
-    resumeData <- gets botResumeData
-    liftIO $ modifyMVar_ resumeData (\oldData -> return $ M.insert (ircConfigName ircConfig) M.empty oldData)
+    put $ bot { botPlugins = M.insert (pluginName plugin) (plugin, pluginMVar, threadId) plugins }
+    liftIO . putMVar mvar $ M.insert name pluginResumeData resumeData
 
 -- | Unloads a plugin
 unloadPlugin :: String -> Bot ()

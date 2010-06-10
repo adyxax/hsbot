@@ -7,11 +7,11 @@ import Control.Exception (AsyncException, Handler (..), IOException, catch, catc
 import Control.Monad.State
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
-import Data.Time
 import Network
 import Prelude hiding (catch)
 import System.IO
-import System.Posix.IO (handleToFd)
+import System.Posix.IO (fdToHandle, handleToFd)
+import System.Posix.Types (Fd)
 
 import Hsbot.Irc.Command
 import Hsbot.Irc.Config
@@ -22,14 +22,24 @@ import Hsbot.Irc.Types
 import Hsbot.Types
 
 -- | IrcBot's main entry point
-startIrcbot :: IrcConfig -> Chan BotMsg -> Chan BotMsg -> IO ()
-startIrcbot config masterChan myChan = do
-    startTime <- getCurrentTime
+startIrcbot :: IrcConfig -> Chan BotMsg -> Chan BotMsg -> Maybe String -> IO ()
+startIrcbot config masterChan myChan txtResumeData = do
+    let resumeData = case txtResumeData of
+            Just txtData -> read txtData :: ResumeData  -- TODO : catch exception
+            Nothing -> M.empty :: ResumeData
+    print resumeData
     putStrLn "[IrcBot] Opening communication channel... "
     chan <- newChan :: IO (Chan IrcBotMsg)
-    putStrLn $ concat ["[IrcBot] Connecting to ", ircConfigAddress config, "... "]
-    handle <- connectTo (ircConfigAddress config) (ircConfigPort config)
-    hSetBuffering handle NoBuffering
+    handle <- case M.lookup "HANDLE" resumeData of
+        Just txtFd -> do
+            let fd = read txtFd :: Fd
+            fdToHandle fd
+        Nothing -> do
+            putStrLn $ concat ["[IrcBot] Connecting to ", ircConfigAddress config, "... "]
+            handle <- connectTo (ircConfigAddress config) (ircConfigPort config)
+            hSetBuffering handle NoBuffering
+            hSetEncoding handle utf8
+            return handle
     fd <- handleToFd handle
     putStrLn "[IrcBot] Spawning reader threads..."
     myOwnThreadId  <- myThreadId
@@ -41,8 +51,7 @@ startIrcbot config masterChan myChan = do
                                         , ircServerNickname      = ircConfigNickname config
                                         , ircServerCommandPrefix = ircConfigCommandPrefix config
                                         , ircServerChan          = chan }
-        ircBotState = IrcBotState { ircBotStartTime            = startTime
-                                  , ircBotPlugins              = M.empty
+        ircBotState = IrcBotState { ircBotPlugins              = M.empty
                                   , ircBotCommands             = M.empty
                                   , ircBotChan                 = chan
                                   , ircBotMasterChan           = masterChan
@@ -60,8 +69,8 @@ startIrcbot config masterChan myChan = do
     killThread readerThreadId
     killThread masterReaderThreadId
     putStrLn "[IrcBot] Killing active plugins... "
-    let resumeData = ircBotResumeData ircBotState'''
-        ircPlugins = read (fromMaybe [] (M.lookup "PLUGINS" resumeData)) :: [String]
+    let resumeData' = ircBotResumeData ircBotState'''
+        ircPlugins = read (fromMaybe [] (M.lookup "PLUGINS" resumeData')) :: [String]
     evalStateT (mapM_ killIrcPlugin ircPlugins) ircBotState'''
     return ()
 

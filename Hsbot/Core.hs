@@ -18,12 +18,23 @@ import Hsbot.Plugin
 import Hsbot.Types
 
 -- | Bot's main entry point
-hsbot :: [BotConfig] -> IO ()
-hsbot config = do
-    startTime <- getCurrentTime
+hsbot :: [BotConfig] -> Maybe String -> IO ()
+hsbot config txtResumeData= do
+    let resumeData = case txtResumeData of
+        Just txtData -> read txtData :: BotResumeData  -- TODO : catch exception
+        Nothing -> M.empty :: BotResumeData
+    startTime <- case M.lookup "HSBOT" resumeData of
+    Just hsbotData -> do
+        case M.lookup "STARTTIME" hsbotData of
+            Just txtStartTime -> do
+                let gotStartTime = read txtStartTime :: UTCTime
+                return gotStartTime
+            Nothing -> getCurrentTime
+    Nothing -> getCurrentTime
+    let resumeData' = M.insert "HSBOT" (M.singleton "STARTTIME" $ show startTime) resumeData
     putStrLn "[Hsbot] Opening communication channel... "
     chan <- newChan :: IO (Chan BotMsg)
-    mvar <- newMVar M.empty :: IO (MVar BotResumeData)
+    mvar <- newMVar resumeData' :: IO (MVar BotResumeData)
     putStrLn "[Hsbot] Installing signal handlers... "
     _ <- installHandler sigHUP (Catch $ sigHupHandler chan) Nothing
     _ <- installHandler sigTERM (Catch $ sigTermHandler chan) Nothing
@@ -36,10 +47,10 @@ hsbot config = do
     putStrLn "[Hsbot] Entering main loop... "
     (status, botState') <- runLoop botState
     putStrLn "[Hsbot] Killing active plugins... "
-    resumeData <- takeMVar mvar
-    evalStateT (mapM_ killPlugin $ M.keys resumeData) botState'
+    newResumeData <- takeMVar mvar
+    evalStateT (mapM_ killPlugin $ M.keys newResumeData) botState'
     if status == BotReboot
-      then resumeHsbot resumeData
+      then hsbot config (Just $ show newResumeData)  -- TODO : exec on the hsbot launcher with the reload string
       else return ()
   where
     runLoop :: BotState -> IO (BotStatus, BotState)
@@ -49,10 +60,6 @@ hsbot config = do
         case status of
             BotContinue -> runLoop botState'
             _           -> return (status, botState')
-
-resumeHsbot :: BotResumeData -> IO ()
-resumeHsbot resumeData = do
-    print resumeData
 
 -- | Run the bot main loop
 botCore :: Bot (BotStatus)

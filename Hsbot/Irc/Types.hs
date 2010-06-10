@@ -9,7 +9,6 @@ module Hsbot.Irc.Types
 import Control.Concurrent
 import Control.Monad.State
 import qualified Data.Map as M
-import Data.Time
 import System.IO
 
 import Hsbot.Irc.Config
@@ -22,8 +21,7 @@ type IrcBot = StateT IrcBotState IO
 
 -- | An Ircbot state
 data IrcBotState = IrcBotState
-    { ircBotStartTime            :: UTCTime                 -- the bot's uptime
-    , ircBotPlugins              :: M.Map String (IrcPluginState, MVar (), ThreadId) -- Loaded plugins
+    { ircBotPlugins              :: M.Map String (IrcPluginState, MVar (), ThreadId) -- Loaded plugins
     , ircBotCommands             :: M.Map String [String]   -- Loaded plugins
     , ircBotChan                 :: Chan IrcBotMsg          -- The IrcBot's communication channel
     , ircBotMasterChan           :: Chan BotMsg             -- The Hsbot communication channel
