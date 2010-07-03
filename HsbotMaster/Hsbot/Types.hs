@@ -19,8 +19,6 @@ import qualified Data.Map as M
 import Data.Time
 import System.IO
 
-import Hsbot.Config
-
 -- | The Bot monad
 type Bot = StateT BotState IO
 
@@ -29,7 +27,6 @@ data BotState = BotState
     { botStartTime  :: UTCTime      -- the bot's uptime
     , botPlugins    :: M.Map String (PluginState, MVar (), ThreadId) -- Loaded plugins
     , botChan       :: Chan BotMsg  -- the bot's communication channel
-    , botConfig     :: [BotConfig]  -- the bot's starting config
     , botResumeData :: MVar BotResumeData   -- the necessary data to resume the bot's operations on reboot
     }
 

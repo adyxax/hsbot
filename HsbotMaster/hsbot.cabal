@@ -1,63 +1,43 @@
-name: hsbot
-version: 0.2.1
-cabal-version: >= 1.8
-build-type: Simple
-license: BSD3
-license-file: LICENSE
-copyright: Copyright (c) 2010 Julien Dessaux
-author: Julien Dessaux
-maintainer: judessaux@gmail.com
-homepage: http://code.adyxax.org/hsbot
-bug-reports: http://code.adyxax.org/hsbot/tracker
-category: Hsbot
-synopsis: An multi-purpose bot, mainly an IRC bot
-description:
+Name:               hsbot
+Version:            0.3
+Cabal-version:      >=1.2
+Synopsis:           A multi-purposes bot.
+Description:
   hsbot is a multi-purpose bot, written slowly, as long as I learned more
   haskell. It features IRC integration and some plugins. I tried to design
   a bot architecture as modular and as flexible as possible.
+Homepage:           http://hsbot.adyxax.org/
+License:            BSD3
+License-file:       LICENSE
+Author:             Julien Dessaux
+Maintainer:         judessaux@gmail.com
+Copyright:          Copyright (c) 2010 Julien Dessaux
+Category:           Hsbot
+Build-type:         Simple
+
 
 Executable hsbot
-  Main-Is: Main.hs
-  ghc-options: -Wall
-  extensions: DeriveDataTypeable ScopedTypeVariables
-  build-depends: base >= 4.1 && < 5,
-                 directory >= 1.0,
-                 filepath >= 1.1,
-                 process >= 1.0,
-                 unix >= 2.4
+  Main-is:          Main.hs
+  Ghc-options:      -Wall
+  Extensions:       DeriveDataTypeable ScopedTypeVariables
+  Build-depends:    base >= 4.1 && < 5,
+                    directory >= 1.0,
+                    filepath >= 1.1,
+                    process >= 1.0,
+                    unix >= 2.4
 
 Library
-  exposed-modules:
-                 Hsbot.Config
-                 Hsbot.Core
-                 Hsbot.Irc.Command
-                 Hsbot.Irc.Config
-                 Hsbot.Irc.Core
-                 Hsbot.Irc.Message
-                 Hsbot.Irc.Plugin
-                 Hsbot.Irc.Plugin.Core
-                 Hsbot.Irc.Plugin.Dummy
-                 Hsbot.Irc.Plugin.Ping
-                 Hsbot.Irc.Plugin.Quote
-                 Hsbot.Irc.Plugin.Utils
-                 Hsbot.Irc.Server
-                 Hsbot.Irc.Types
-                 Hsbot.Message
-                 Hsbot.Plugin
-                 Hsbot.PluginUtils
-                 Hsbot.Types
-  ghc-options: -Wall
-  extensions: DeriveDataTypeable ScopedTypeVariables
-  build-depends: base >= 4.1 && < 5,
-                 containers >= 0.3,
-                 directory >= 1.0,
-                 filepath >= 1.1,
-                 haskell98 >= 1.0,
-                 mtl >= 1.1,
-                 network >= 2.2,
-                 parsec >= 3.1,
-                 random >= 1.0,
-                 text >= 0.7,
-                 time >= 1.1,
-                 unix >= 2.4
+  Ghc-options:      -Wall
+  Extensions:       DeriveDataTypeable ScopedTypeVariables
+  Exposed-modules:  Hsbot.Message,
+                    Hsbot.PluginUtils,
+                    Hsbot.Types
+  Build-depends:    base >= 4.1 && < 5,
+                    containers >= 0.3,
+                    mtl >= 1.1,
+                    time >= 1.1
+
+-- Extra files to be distributed with the package, such as examples or
+-- a README.
+-- Extra-source-files:  
 
