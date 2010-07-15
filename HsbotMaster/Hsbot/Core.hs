@@ -24,13 +24,13 @@ hsbot config txtResumeData= do
         Just txtData -> read txtData :: BotResumeData  -- TODO : catch exception
         Nothing -> M.empty :: BotResumeData
     startTime <- case M.lookup "HSBOT" resumeData of
-    Just hsbotData -> do
-        case M.lookup "STARTTIME" hsbotData of
-            Just txtStartTime -> do
-                let gotStartTime = read txtStartTime :: UTCTime
-                return gotStartTime
-            Nothing -> getCurrentTime
-    Nothing -> getCurrentTime
+        Just hsbotData -> do
+            case M.lookup "STARTTIME" hsbotData of
+                Just txtStartTime -> do
+                    let gotStartTime = read txtStartTime :: UTCTime
+                    return gotStartTime
+                Nothing -> getCurrentTime
+        Nothing -> getCurrentTime
     let resumeData' = M.insert "HSBOT" (M.singleton "STARTTIME" $ show startTime) resumeData
     putStrLn "[Hsbot] Opening communication channel... "
     chan <- newChan :: IO (Chan BotMsg)

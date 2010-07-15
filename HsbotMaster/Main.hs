@@ -2,57 +2,73 @@ module Main (main) where
 
 import Control.Monad (when)
 import Prelude hiding (catch)
-import System.Directory
+import System.Console.GetOpt
 import System.Environment
 import System.Exit
-import System.FilePath
-import System.Info
 import System.IO
-import System.Posix.Process (executeFile)
-import System.Process
 
--- | Dynamic launching function
+-- | Main function
 main :: IO ()
 main = do
     args <- getArgs
-    case args of
-        []         -> buildLaunch
-        ["--help"] -> usage
-        _          -> fail "unrecognized flags"
+    -- Parse options, getting a list of option actions
+    let (actions, nonOptions, errors) = getOpt RequireOrder options args
+    -- Here we thread startOptions through all supplied option actions
+    opts <- case (nonOptions, errors) of
+        ([], []) -> foldl (>>=) (return defaultOptions) actions
+        (_, _) -> do
+            hPutStrLn stderr $ concat errors ++ usageInfo header options
+            exitWith $ ExitFailure 1
+    when (optDebug opts) . putStrLn $ "Got options : " ++ (show opts)
 
-usage :: IO ()
-usage = do
-    self <- getProgName
-    putStr . unlines $
-        concat ["Usage: ", self, " [OPTION]"] :
-        "Options:" :
-        "  --help : Print this message" :
-        []
+-- | CLI options
+data Options = Options
+    { optDebug      :: Bool
+    , optConfigFile :: Maybe String
+    , optGroup      :: Maybe String
+    , optUser       :: Maybe String
+    , optVerbose    :: Bool
+    } deriving (Show)
 
-buildLaunch ::  IO ()
-buildLaunch = do
-    _ <- recompile
-    dir  <- getAppUserDataDirectory "hsbot"
-    args <- getArgs
-    _ <- executeFile (dir ++ "/hsbot-" ++ arch ++ "-" ++ os) False args Nothing
-    return ()
+-- | CLI default options
+defaultOptions :: Options
+defaultOptions = Options { optDebug      = False
+                         , optConfigFile = Nothing
+                         , optGroup      = Nothing
+                         , optUser       = Nothing
+                         , optVerbose    = False }
 
-recompile :: IO (Bool)
-recompile = do
-    dir <- getAppUserDataDirectory "hsbot"
-    let binn = "hsbot-"++arch++"-"++os
-        base = dir </> "hsbot"
-        err  = base ++ ".errors"
-        src  = base ++ ".hs"
-    errorHandle <- openFile err WriteMode
-    exitCode <- waitForProcess =<< runProcess "ghc" ["--make", "hsbot.hs", "-fforce-recomp", "-XScopedTypeVariables", "-o", binn] (Just dir)
-                                              Nothing Nothing Nothing (Just errorHandle)
-    hClose errorHandle
-    when (exitCode /= ExitSuccess) $ do
-        ghcErr <- readFile err
-        let msg = unlines $
-                ["Error detected while loading hsbot configuration file: " ++ src]
-                ++ lines ghcErr ++ ["","Please check the file for errors."]
-        hPutStrLn stderr msg
-    return (exitCode == ExitSuccess)
+-- | CLI options logic
+options :: [ OptDescr (Options -> IO Options) ]
+options =
+    [ Option "d" ["debug"]
+        (NoArg (\opt -> return opt { optDebug = True, optVerbose = True }))
+        "Enter verbose debug mode and prevents Hsbot from forking in background"
+    , Option "f" ["file"]
+        (ReqArg (\arg opt -> return opt { optConfigFile = return arg }) "<config_file>")
+        "The config file to use"
+    , Option "g" ["group"]
+        (ReqArg (\arg opt -> return opt { optGroup = return arg }) "<group>")
+        "The group hsbot will run as"
+    , Option "h" ["help"]
+        (NoArg (\_ -> do
+                    putStrLn $ usageInfo header options
+                    exitWith ExitSuccess))
+        "Print this help message"
+    , Option "u" ["user"]
+        (ReqArg (\arg opt -> return opt { optUser = return arg }) "<user>")
+        "The user hsbot will run as"
+    , Option "v" ["verbose"]
+        (NoArg (\opt -> return opt { optVerbose = True }))
+        "Enable verbose messages"
+    , Option "V" ["version"]
+        (NoArg (\_ -> do
+                    putStrLn "Hsbot version 0.3"
+                    exitWith ExitSuccess))
+        "Show version"
+    ]
+
+-- | Usage header
+header :: String
+header = "Usage: hsbot [-dhvV] [-f config_file] [-u user] [-g group]"
 
