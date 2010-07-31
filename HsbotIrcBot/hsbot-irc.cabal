@@ -1,0 +1,29 @@
+Name:               hsbot-irc
+Version:            0.3
+Cabal-version:      >=1.2
+Synopsis:           The irc part of a multi-purposes bot.
+Description:
+  hsbot is a multi-purpose bot, written slowly, as long as I learned more
+  haskell. It features IRC integration and some plugins. I tried to design
+  a bot architecture as modular and as flexible as possible.
+Homepage:           http://hsbot.adyxax.org/
+License:            BSD3
+License-file:       LICENSE
+Author:             Julien Dessaux
+Maintainer:         judessaux@gmail.com
+Copyright:          Copyright (c) 2010 Julien Dessaux
+Category:           Hsbot
+Build-type:         Simple
+
+
+Executable hsbot-irc
+  Main-is:          Main.hs
+  Ghc-options:      -Wall
+  Extensions:       DeriveDataTypeable ScopedTypeVariables
+  Build-depends:    base >= 4.1 && < 5,
+                    ConfigFile,
+                    MissingH,
+                    mtl,
+                    network,
+                    unix
+
