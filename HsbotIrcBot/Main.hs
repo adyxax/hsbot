@@ -22,11 +22,10 @@ main = do
             hPutStrLn stderr $ concat errors ++ usageInfo header options
             exitWith $ ExitFailure 1
     -- From there the initialization code truly begins
-    when (optDebug opts) . putStrLn $ "Got options : " ++ (show opts)
+    when (optDebug opts) . putStrLn $ "[hsbot-irc] Got CLI options :\n" ++ (show opts)
     -- We find and parse the config file
     ircConfig <- getIrcConfig $ optConfigFile opts
-    print $ ircConfigChannels ircConfig
-    print $ ircConfigPlugins ircConfig
+    when (optDebug opts) . putStrLn $ "[hsbot-irc] Compiled config :\n" ++ (show ircConfig)
 
 -- CLI argument parting stuff {{{
 -- | CLI options

@@ -22,6 +22,20 @@ data IrcConfig = IrcConfig
     , ircConfigPlugins       :: [String] -- the ircPlugins to load
     }
 
+instance Show IrcConfig where
+    show (IrcConfig address port channels nickname password realname commandPrefix plugins) = unlines $
+        concat [ "Address: ", address ] :
+        concat [ "Port: ", case port of
+                            PortNumber num -> show num
+                            Service s      -> show s
+                            UnixSocket u   -> show u ] :
+        concat [ "Channels: ", show channels ] :
+        concat [ "Nickname: ", nickname ] :
+        concat [ "Password: ", password ] :
+        concat [ "Realname: ", realname ] :
+        concat [ "CommandPrefix: ", show commandPrefix ] :
+        [ "Plugins: ", show plugins ]
+
 -- | User configuration
 ircDefaultConfig :: IrcConfig
 ircDefaultConfig = IrcConfig
