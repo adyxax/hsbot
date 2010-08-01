@@ -47,7 +47,6 @@ loadIrcPlugin pluginName = do
                         "Quote" -> ircBotPluginQuote
                         _       -> ircBotPluginDummy
     let oldPlugins    = ircBotPlugins ircbot
-        oldResumeData = ircBotResumeData ircbot
     -- We check for unicity
     case M.lookup pluginName oldPlugins of
         Just _  -> return ()
@@ -58,9 +57,7 @@ loadIrcPlugin pluginName = do
                                                , ircPluginChan       = pluginChan
                                                , ircPluginMasterChan = masterChan }
                 newPlugins    = M.insert pluginName (plugin, mvar, threadId) oldPlugins
-                newResumeData = M.insert "PLUGINS" (show $ M.keys newPlugins) oldResumeData
-            put $ ircbot { ircBotPlugins    = newPlugins
-                         , ircBotResumeData = newResumeData }
+            put $ ircbot { ircBotPlugins    = newPlugins }
 
 -- | Sends a list of loaded plugins
 listPlugins :: IrcMsg -> String -> IrcBot ()
@@ -73,13 +70,7 @@ listPlugins originalRequest dest = do
 
 -- | Unloads a plugin
 unloadIrcPlugin :: String -> IrcBot ()
-unloadIrcPlugin name = do
-    killIrcPlugin name
-    ircbot <- get
-    let oldResumeData = ircBotResumeData ircbot
-        newPlugins    = M.keys $ ircBotPlugins ircbot
-        newResumeData = M.insert "PLUGINS" (show newPlugins) oldResumeData
-    put $ ircbot { ircBotResumeData = newResumeData }
+unloadIrcPlugin name = killIrcPlugin name
 
 -- | kills a plugin
 killIrcPlugin :: String -> IrcBot ()

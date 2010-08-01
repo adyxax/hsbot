@@ -8,6 +8,7 @@ import System.IO
 
 import Hsbot.Irc.CLI
 import Hsbot.Irc.Config
+import Hsbot.Irc.Core
 
 -- | Main function
 main :: IO ()
@@ -26,4 +27,8 @@ main = do
     -- We find and parse the config file
     ircConfig <- getIrcConfig $ optConfigFile opts
     when (optDebug opts) . putStrLn $ "[hsbot-irc] Compiled config :\n" ++ (show ircConfig)
+    -- Finally we get into the ircbot stuff
+    case optDebug opts of
+        True -> startIrcbot opts ircConfig
+        False -> startIrcbot opts ircConfig -- TODO : fork process in background
 

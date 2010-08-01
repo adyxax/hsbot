@@ -10,72 +10,56 @@ import Data.Maybe (fromMaybe)
 import Network
 import Prelude hiding (catch)
 import System.IO
-import System.Posix.IO (fdToHandle, handleToFd)
-import System.Posix.Types (Fd)
 
+import Hsbot.Irc.CLI
 import Hsbot.Irc.Command
 import Hsbot.Irc.Config
 import Hsbot.Irc.Message
 import Hsbot.Irc.Plugin
 import Hsbot.Irc.Server
 import Hsbot.Irc.Types
-import Hsbot.Types
 
 -- | IrcBot's main entry point
-startIrcbot :: IrcConfig -> Chan BotMsg -> Chan BotMsg -> Maybe String -> IO ()
-startIrcbot config masterChan myChan txtResumeData = do
-    let resumeData = case txtResumeData of
-            Just txtData -> read txtData :: ResumeData  -- TODO : catch exception
-            Nothing -> M.empty :: ResumeData
-    print resumeData
-    putStrLn "[IrcBot] Opening communication channel... "
+startIrcbot :: Options -> IrcConfig -> IO ()
+startIrcbot opts ircConfig = do
+    when (optDebug opts) $ putStrLn "[IrcBot] Opening communication channel... "
     chan <- newChan :: IO (Chan IrcBotMsg)
-    handle <- case M.lookup "HANDLE" resumeData of
-        Just txtFd -> do
-            let fd = read txtFd :: Fd
-            fdToHandle fd
-        Nothing -> do
-            putStrLn $ concat ["[IrcBot] Connecting to ", ircConfigAddress config, "... "]
-            handle <- connectTo (ircConfigAddress config) (ircConfigPort config)
-            hSetBuffering handle NoBuffering
-            hSetEncoding handle utf8
-            return handle
-    fd <- handleToFd handle
-    putStrLn "[IrcBot] Spawning reader threads..."
+    when (optDebug opts) . putStrLn $ concat ["[IrcBot] Connecting to ", ircConfigAddress ircConfig, "... "]
+    handle <- connectTo (ircConfigAddress ircConfig) (ircConfigPort ircConfig)
+    hSetBuffering handle NoBuffering
+    hSetEncoding handle utf8
+    when (optDebug opts) $ putStrLn "[IrcBot] Spawning reader thread..."
     myOwnThreadId  <- myThreadId
     readerThreadId <- forkIO $ ircBotReader handle chan myOwnThreadId
-    masterReaderThreadId <- forkIO $ ircBotMasterReader myChan chan
-    putStrLn "[IrcBot] Initializing server connection..."
-    let ircServerState = IrcServerState { ircServerId            = ircConfigAddress config
+    when (optDebug opts) $ putStrLn "[IrcBot] Initializing server connection..."
+    let ircServerState = IrcServerState { ircServerId            = ircConfigAddress ircConfig
                                         , ircServerChannels      = []
-                                        , ircServerNickname      = ircConfigNickname config
-                                        , ircServerCommandPrefix = ircConfigCommandPrefix config
+                                        , ircServerNickname      = ircConfigNickname ircConfig
+                                        , ircServerCommandPrefix = ircConfigCommandPrefix ircConfig
                                         , ircServerChan          = chan }
         ircBotState = IrcBotState { ircBotPlugins              = M.empty
                                   , ircBotCommands             = M.empty
                                   , ircBotChan                 = chan
-                                  , ircBotMasterChan           = masterChan
                                   , ircBotServerState          = ircServerState
                                   , ircBotHandle               = handle
-                                  , ircBotConfig               = config
-                                  , ircBotResumeData           = M.singleton "HANDLE" (show fd) }
-    ircBotState' <- execStateT (initBotServerConnection config) ircBotState
-    putStrLn "[IrcBot] Spawning plugins..."
+                                  , ircBotConfig               = ircConfig }
+    ircBotState' <- execStateT (initBotServerConnection ircConfig) ircBotState
+    when (optDebug opts) $ putStrLn "[IrcBot] Spawning plugins..."
     ircBotState'' <- execStateT spawnIrcPlugins ircBotState'
-    putStrLn "[IrcBot] Entering Core loop... "
-    ircBotState''' <- (execStateT ircBotLoop ircBotState'') `catches` [ Handler (\ (_ :: IOException) -> return (ircBotState''))
-                                                                      , Handler (\ (_ :: AsyncException) -> return (ircBotState'')) ]
-    putStrLn "[IrcBot] Killing reader threads..."
+    when (optDebug opts) $ putStrLn "[IrcBot] Entering Core loop... "
+    (_, ircBotState''') <- runLoop ircBotState''
+    when (optDebug opts) $ putStrLn "[IrcBot] Killing reader thread..."
     killThread readerThreadId
-    killThread masterReaderThreadId
-    putStrLn "[IrcBot] Killing active plugins... "
-    let resumeData' = ircBotResumeData ircBotState'''
-        ircPlugins = read (fromMaybe [] (M.lookup "PLUGINS" resumeData')) :: [String]
-    evalStateT (mapM_ killIrcPlugin ircPlugins) ircBotState'''
-    return ()
-
---resumeIrcBot
---resumeIrcBot
+    when (optDebug opts) $ putStrLn "[IrcBot] Killing active plugins... "
+    evalStateT (mapM_ killIrcPlugin . M.keys $ ircBotPlugins ircBotState''') ircBotState'''
+  where
+    runLoop :: IrcBotState -> IO (BotStatus, IrcBotState)
+    runLoop botState = do
+        (status, botState') <- (runStateT ircBotCore botState) `catches` [ Handler (\ (_ :: IOException) -> return (BotExit, botState))
+                                                                         , Handler (\ (_ :: AsyncException) -> return (BotExit, botState)) ]
+        case status of
+            BotContinue -> runLoop botState'
+            _           -> return (status, botState')
 
 -- | Runs the IrcBot's reader loop
 ircBotReader :: Handle -> Chan IrcBotMsg -> ThreadId -> IO ()
@@ -93,13 +77,6 @@ ircBotReader handle chan fatherThreadId = forever $ do
         killThread myId
         return ""
 
--- | Reads the Master's chan
-ircBotMasterReader :: Chan BotMsg -> Chan IrcBotMsg -> IO ()
-ircBotMasterReader masterChan _ = forever $ do
-    _ <- readChan masterChan
-    return ()
-    -- TODO : handle botMsg
-
 -- | Initialize the bot's server connection
 initBotServerConnection :: IrcConfig -> IrcBot ()
 initBotServerConnection config = do
@@ -109,28 +86,24 @@ initBotServerConnection config = do
     put $ ircBot { ircBotServerState = ircServerState' }
 
 -- | Run the IrcBot's main loop
-ircBotLoop :: IrcBot ()
-ircBotLoop = forever $ do
+ircBotCore :: IrcBot (BotStatus)
+ircBotCore = do
     chan <- gets ircBotChan
     msg  <- liftIO $ readChan chan
     case msg of
         InIrcMsg inIrcMsg   -> dispatchMessage $ InIrcMsg inIrcMsg
         OutIrcMsg outIrcMsg -> sendThisMessage outIrcMsg
-        IntIrcCmd intIrcCmd -> do
-            reboot <- processInternalCommand $ IntIrcCmd intIrcCmd
-            reportUpdate
-            if reboot == BotReboot
-              then processRebootCommand
-              else return ()
+        IntIrcCmd intIrcCmd -> processInternalCommand $ IntIrcCmd intIrcCmd
   where
-    sendThisMessage :: IrcMsg -> IrcBot ()
+    sendThisMessage :: IrcMsg -> IrcBot (BotStatus)
     sendThisMessage outputMsg = do
         let str = serializeIrcMsg outputMsg
         handle <- gets ircBotHandle
         liftIO $ hPutStr handle (str ++ "\r\n")
+        return BotContinue
 
 -- | Dispatches an input message
-dispatchMessage :: IrcBotMsg -> IrcBot ()
+dispatchMessage :: IrcBotMsg -> IrcBot (BotStatus)
 dispatchMessage (InIrcMsg inIrcMsg) = do
     config  <- gets ircBotConfig
     plugins <- gets ircBotPlugins
@@ -143,6 +116,7 @@ dispatchMessage (InIrcMsg inIrcMsg) = do
         in mapM_ (sendRunCommand (tail getMsgContent) . first) plugins'
       else
         mapM_ (sendToPlugin (InIrcMsg inIrcMsg) . first) (M.elems plugins)
+    return BotContinue
   where
     isPluginCommand :: IrcConfig -> Bool
     isPluginCommand config =
@@ -152,26 +126,5 @@ dispatchMessage (InIrcMsg inIrcMsg) = do
     sendRunCommand cmd plugin =  sendToPlugin (IntIrcCmd $ IrcCmd "RUN" "CORE" (ircPluginName plugin) cmd inIrcMsg) plugin
     getMsgContent :: String
     getMsgContent = unwords . tail $ ircMsgParameters inIrcMsg
-dispatchMessage _ = return ()
-
--- | Reports an update to the master bot
-reportUpdate :: IrcBot ()
-reportUpdate = do
-    ircbot <- get
-    let masterChan = ircBotMasterChan ircbot
-        msg = UpdMsg $ ResMsg { resMsgFrom = ircConfigName $ ircBotConfig ircbot
-                              , resMsgData = ircBotResumeData ircbot }
-    liftIO $ writeChan masterChan msg
-
--- | Process a reboot command
-processRebootCommand :: IrcBot ()
-processRebootCommand = do
-    ircbot <- get
-    let masterChan = ircBotMasterChan ircbot
-        msg = IntMsg $ Msg { msgType  = "REBOOT"
-                           , msgFrom  = ircConfigName $ ircBotConfig ircbot
-                           , msgTo    = "CORE"
-                           , msgStuff = show $ ircBotResumeData ircbot
-                           }
-    liftIO $ writeChan masterChan msg
+dispatchMessage _ = return (BotContinue)
 

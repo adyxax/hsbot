@@ -1,5 +1,6 @@
 module Hsbot.Irc.Types
-    ( IrcBot
+    ( BotStatus (..)
+    , IrcBot
     , IrcBotState (..)
     , IrcServer
     , IrcServerState (..)
@@ -14,7 +15,6 @@ import System.IO
 import Hsbot.Irc.Config
 import Hsbot.Irc.Message
 import Hsbot.Irc.Plugin.Utils
-import Hsbot.Types
 
 -- | The Ircbot monad
 type IrcBot = StateT IrcBotState IO
@@ -24,12 +24,13 @@ data IrcBotState = IrcBotState
     { ircBotPlugins              :: M.Map String (IrcPluginState, MVar (), ThreadId) -- Loaded plugins
     , ircBotCommands             :: M.Map String [String]   -- Loaded plugins
     , ircBotChan                 :: Chan IrcBotMsg          -- The IrcBot's communication channel
-    , ircBotMasterChan           :: Chan BotMsg             -- The Hsbot communication channel
     , ircBotServerState          :: IrcServerState          -- The state of the IrcServer
     , ircBotHandle               :: Handle                  -- The server's socket/handle
     , ircBotConfig               :: IrcConfig               -- The starting configuration
-    , ircBotResumeData           :: ResumeData              -- the necessary data to resume the bot's operations on reboot
     }
+
+-- | how we exit from the botLoop
+data BotStatus = BotExit | BotReboot | BotContinue deriving (Eq)
 
 -- | The IrcServer monad
 type IrcServer = StateT IrcServerState IrcBot
@@ -46,3 +47,4 @@ data IrcServerState = IrcServerState
 -- | Utilities for triplets
 first :: (a, b, c) -> a
 first (a, _, _) = a
+

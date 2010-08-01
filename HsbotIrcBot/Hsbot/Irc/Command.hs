@@ -12,7 +12,6 @@ import Data.Maybe
 import Hsbot.Irc.Message
 import Hsbot.Irc.Plugin
 import Hsbot.Irc.Types
-import Hsbot.Types
 
 -- | Registers a plugin's command
 registerCommand :: String -> String -> IrcBot ()
@@ -57,18 +56,8 @@ processCoreCommand ircCmd = do
         "REGISTER"   -> registerCommand (ircCmdMsg ircCmd) (ircCmdFrom ircCmd)
         "UNLOAD"     -> unloadIrcPlugin $ ircCmdMsg ircCmd
         "UNREGISTER" -> unregisterCommand (ircCmdMsg ircCmd) (ircCmdFrom ircCmd)
-        "UPDATE"     -> processUpdateCommand ircCmd
         _            -> return ()
     if command' == "REBOOT"
       then return BotReboot
       else return BotContinue
-
--- | Process an update command
-processUpdateCommand :: IrcCmd -> IrcBot ()
-processUpdateCommand ircCmd = do
-    ircbot <- get
-    let oldData = ircBotResumeData ircbot
-        from    = ircCmdFrom ircCmd
-        stuff   = ircCmdMsg ircCmd
-    put $ ircbot { ircBotResumeData = M.insert from stuff oldData }
 

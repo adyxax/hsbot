@@ -41,7 +41,7 @@ pMsg = do
     cmd <- pCommand
     params <- many (char ' ' >> (pLongParam <|> pShortParam))
     _ <- char '\r'
-    --eof
+    eof
     return $ IrcMsg pfx cmd params
 
 pPrefix :: ParsecT String u Identity [Char]

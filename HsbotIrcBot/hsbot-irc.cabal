@@ -22,8 +22,16 @@ Executable hsbot-irc
   Extensions:       DeriveDataTypeable ScopedTypeVariables
   Build-depends:    base >= 4.1 && < 5,
                     ConfigFile,
+                    containers,
+                    directory,
+                    filepath,
+                    haskell98,
                     MissingH,
                     mtl,
                     network,
+                    parsec >= 3,
+                    random,
+                    text,
+                    time,
                     unix
 
