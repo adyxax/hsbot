@@ -4,6 +4,8 @@ module Hsbot.Irc.Config
     , getIrcConfig
     ) where
 
+import Control.Monad.Error
+import Data.Char (isDigit)
 import qualified Data.ConfigFile as C
 import Data.Either.Utils
 import Network
@@ -46,7 +48,7 @@ ircDefaultConfig = IrcConfig
     , ircConfigPassword      = ""
     , ircConfigRealname      = "The One True bot, with it's haskell soul."
     , ircConfigCommandPrefix = '@'
-    , ircConfigPlugins       = ["Ping"]
+    , ircConfigPlugins       = ["Ping", "Core"]
     }
 
 -- | config file retrieving
@@ -59,7 +61,7 @@ getIrcConfig maybePath =
                 True -> do
                     fileStatus <- getFileStatus path
                     case isRegularFile $ fileStatus of
-                        True -> compileIrcConfig ircDefaultConfig path
+                        True -> getConfigFromFile path
                         False -> do
                             putStrLn "Invalid configuration file path."
                             exitWith $ ExitFailure 1
@@ -68,51 +70,65 @@ getIrcConfig maybePath =
                     exitWith $ ExitFailure 1
         Nothing -> return ircDefaultConfig  -- TODO : try defaults like $HOME/.hsbotrc, /etc/hsbotrc or /usr/local/etc/hsbotrc
 
--- | config file parsing
-compileIrcConfig :: IrcConfig -> String -> IO (IrcConfig)
-compileIrcConfig ircConfig path = do
-    val <- C.readfile C.emptyCP path
-    let cp = forceEither val
-    let address = case C.get cp "IRC" "address" of
-         Right this -> this
-         Left _ -> ircConfigAddress ircConfig
-    let port = case C.get cp "IRC" "port" of
-         Right this -> PortNumber $ fromIntegral (read this :: Int) -- TODO error handling
-         Left _ -> ircConfigPort ircConfig
-    let channels = case C.get cp "IRC" "channels" of
-         Right this -> map (lstrip ' ') (split this ',')
-         Left _ -> ircConfigChannels ircConfig
-    let nickname = case C.get cp "IRC" "nickname" of
-         Right this -> this
-         Left _ -> ircConfigNickname ircConfig
-    let password = case C.get cp "IRC" "password" of
-         Right this -> this
-         Left _ -> ircConfigPassword ircConfig
-    let realname = case C.get cp "IRC" "realname" of
-         Right this -> this
-         Left _ -> ircConfigRealname ircConfig
-    let commandPrefix = case C.get cp "IRC" "commandPrefix" of
-         Right this -> head this -- TODO error handling
-         Left _ -> ircConfigCommandPrefix ircConfig
-    let plugins = case C.get cp "IRC" "plugins" of
-         Right this -> map (lstrip ' ') (split this ',')
-         Left _ -> ircConfigPlugins ircConfig
-    return ircConfig { ircConfigAddress       = address
-                     , ircConfigPort          = port
-                     , ircConfigChannels      = channels
-                     , ircConfigNickname      = nickname
-                     , ircConfigPassword      = password
-                     , ircConfigRealname      = realname
-                     , ircConfigCommandPrefix = commandPrefix
-                     , ircConfigPlugins       = plugins }
+-- | Get configuration from config file
+getConfigFromFile :: FilePath -> IO IrcConfig
+getConfigFromFile fname = readfile C.emptyCP fname >>= extractConfig . forceEither
+
+-- | A version of readfile that treats the file as UTF-8
+readfile :: MonadError C.CPError m => C.ConfigParser -> FilePath -> IO (m C.ConfigParser)
+readfile cp path' = do
+    contents <- readFile path'
+    return $ C.readstring cp contents
+
+-- | config file processing
+extractConfig :: C.ConfigParser -> IO IrcConfig
+extractConfig cp = do
+    config' <- runErrorT $ do
+        cfAddress <- getit "address"
+        cfPort <- getit "port"
+        cfChannels <- getit "channels"
+        cfNickname <- getit "nickname"
+        cfPassword <- getit "password"
+        cfRealname <- getit "realname"
+        cfCommandPrefix <- getit "commandprefix"
+        cfPlugins <- getit "plugins"
+        return $! IrcConfig {
+                      ircConfigAddress       = cfAddress
+                    , ircConfigPort          = PortNumber . fromIntegral $ readInteger "port" cfPort
+                    , ircConfigChannels      = splitCommaList cfChannels
+                    , ircConfigNickname      = cfNickname
+                    , ircConfigPassword      = cfPassword
+                    , ircConfigRealname      = cfRealname
+                    , ircConfigCommandPrefix = readChar "commandprefix" cfCommandPrefix
+                    , ircConfigPlugins       = splitCommaList cfPlugins }
+    case config' of
+         Left (C.ParseError e, e') -> error $ "Parse error: " ++ e ++ "\n" ++ e'
+         Left e                  -> error (show e)
+         Right c                 -> return c
   where
-    split :: String -> Char -> [String]
-    split [] _ = [""]
-    split (c:cs) delim
-       | c == delim = "" : rest
-       | otherwise = (c : head rest) : tail rest
-      where rest = split cs delim
-    lstrip :: Char -> String -> String
-    lstrip x (c:cs) = if (x == c) then (lstrip x cs) else c:(lstrip x cs)
-    lstrip _ [] = []
+    getit = C.get cp "IRC"
+
+readChar :: String -> String -> Char
+readChar _ x | length x == 1 = head x
+readChar opt _ = error $ opt ++ " must be one character long."
+
+readInteger :: String -> String -> Int
+readInteger _   x | all isDigit x = read x ::Int
+readInteger opt _ = error $ opt ++ " must be an integer."
+
+-- readNumber :: (Num a, Read a) => String -> String -> a
+-- readNumber _   x | all isDigit x = read x
+-- readNumber opt _ = error $ opt ++ " must be a number."
+
+splitCommaList :: String -> [String]
+splitCommaList l =
+    let (first, rest) = break (== ',') l
+        first' = lrStrip first
+    in case rest of
+            []     -> if null first' then [] else [first']
+            (_:rs) -> first' : splitCommaList rs
+
+lrStrip :: String -> String
+lrStrip = reverse . dropWhile isWhitespace . reverse . dropWhile isWhitespace
+    where isWhitespace = (`elem` " \t\n")
 

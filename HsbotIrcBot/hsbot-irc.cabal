@@ -19,7 +19,7 @@ Build-type:         Simple
 Executable hsbot-irc
   Main-is:          Main.hs
   Ghc-options:      -Wall
-  Extensions:       DeriveDataTypeable ScopedTypeVariables
+  Extensions:       DeriveDataTypeable FlexibleContexts ScopedTypeVariables
   Build-depends:    base >= 4.1 && < 5,
                     ConfigFile,
                     containers,
