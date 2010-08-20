@@ -105,26 +105,26 @@ ircBotCore = do
 -- | Dispatches an input message
 dispatchMessage :: IrcBotMsg -> IrcBot (BotStatus)
 dispatchMessage (InIrcMsg inIrcMsg) = do
-    config  <- gets ircBotConfig
-    plugins <- gets ircBotPlugins
-    cmds    <- gets ircBotCommands
-    if (isPluginCommand config)
+    bot <- get
+    let config  = ircBotConfig bot
+        plugins = ircBotPlugins bot
+        cmds    = ircBotCommands bot
+    if isPluginCommand config
       then
-        let key         = tail . head $ words getMsgContent
+        let getMsgContent = unwords . tail $ ircMsgParameters inIrcMsg
+            key         = tail . head $ words getMsgContent
             pluginNames = fromMaybe [] $ M.lookup key cmds
             plugins'    = fromMaybe [] $ mapM (flip M.lookup plugins) pluginNames
+            sendRunCommand cmd plugin =  sendToPlugin (IntIrcCmd $ IrcCmd "RUN" "CORE" (ircPluginName plugin) cmd inIrcMsg) plugin
         in mapM_ (sendRunCommand (tail getMsgContent) . first) plugins'
       else
         mapM_ (sendToPlugin (InIrcMsg inIrcMsg) . first) (M.elems plugins)
     return BotContinue
   where
-    isPluginCommand :: IrcConfig -> Bool
-    isPluginCommand config =
-        and [ ircMsgCommand inIrcMsg == "PRIVMSG"
-        , (head getMsgContent) == ircConfigCommandPrefix config ]
-    sendRunCommand :: String -> IrcPluginState -> IrcBot ()
-    sendRunCommand cmd plugin =  sendToPlugin (IntIrcCmd $ IrcCmd "RUN" "CORE" (ircPluginName plugin) cmd inIrcMsg) plugin
-    getMsgContent :: String
-    getMsgContent = unwords . tail $ ircMsgParameters inIrcMsg
+    isPluginCommand config = and [ ircMsgCommand inIrcMsg == "PRIVMSG", prefix == ircConfigCommandPrefix config ]
+    prefix | length msgWords >= 1 = head . head $ msgWords
+               | otherwise = ' '
+      where
+        msgWords = tail $ ircMsgParameters inIrcMsg
 dispatchMessage _ = return (BotContinue)
 

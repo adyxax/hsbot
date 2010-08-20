@@ -1,10 +1,9 @@
 :julien!~julien@ogu21.corp PRIVMSG #shbot :@quote graou snif
 
-* Find a way to prevent the socket from being garbage collected, by writing a connection handler for example
 * Design another way to launch and manage hsbot and it's configuration
-* Find a way to handle bot reloading threw exec
-* Find a way so that not a single message/information would be lost in the case of a reboot
+* Improved configuration file errors display
 
+* implement quick quoting for one line quotes
 * write the vote system for the quote module
 * only the quote reporter should be able to edit it
 * detect too identical quoting in a raw, or implement quote abort
@@ -27,4 +26,8 @@
 * discard all trace with a color param and replace those with functions info/warn/error/debug
 * write a safe reload : try reload before unloading
 * remove from Types.hs what can be removed from it
+
+* Find a way to handle bot reloading threw exec
+* Find a way to prevent the socket from being garbage collected, by writing a connection handler for example
+* Find a way so that not a single message/information would be lost in the case of a reboot
 
