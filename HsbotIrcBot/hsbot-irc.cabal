@@ -1,5 +1,5 @@
 Name:               hsbot-irc
-Version:            0.3
+Version:            0.3.10
 Cabal-version:      >=1.2
 Synopsis:           The irc part of a multi-purposes bot.
 Description:

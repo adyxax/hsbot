@@ -1,9 +1,9 @@
 :julien!~julien@ogu21.corp PRIVMSG #shbot :@quote graou snif
 
-* Design another way to launch and manage hsbot and it's configuration
-* Improved configuration file errors display
+* Improve configuration file errors display
+* fork process in background
+* implement logging capabilities
 
-* implement quick quoting for one line quotes
 * write the vote system for the quote module
 * only the quote reporter should be able to edit it
 * detect too identical quoting in a raw, or implement quote abort

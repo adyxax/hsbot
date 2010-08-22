@@ -105,6 +105,16 @@ runCommand intCmd
     -- | quote command dispatcher
     dispatchQuoteCmd :: String -> QuoteBot ()
     dispatchQuoteCmd cmd
+      | cmd == "quick" = do
+          quoteBot <- get
+          now <- liftIO $ getCurrentTime
+          let sender   = takeWhile (/= '!') $ fromMaybe "ARGH" (ircMsgPrefix request)
+              newQuote = Quote sender [(quoteElt stuff)] now 0
+              quoteId  = nextQuoteId quoteBot
+              quoteBotDB' = M.insert quoteId newQuote (quoteBotDB quoteBot)
+          put $ quoteBot { nextQuoteId = quoteId + 1, quoteBotDB = quoteBotDB' }
+          lift $ answerMsg request ("New quoteId : " ++ show quoteId)
+          syncQuoteBot
       | cmd == "start"  = do
           quoteBot <- get
           now <- liftIO $ getCurrentTime
