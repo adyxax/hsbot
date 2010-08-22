@@ -105,6 +105,23 @@ runCommand intCmd
     -- | quote command dispatcher
     dispatchQuoteCmd :: String -> QuoteBot ()
     dispatchQuoteCmd cmd
+      | cmd == "help" =
+          case length stuff of
+               0 -> lift $ answerMsg request ("Usage: quote [append|commit|help|quick|start] {quoteId} {nickname} {quote}")
+               _ -> case head stuff of
+                         "quick" -> do
+                             lift $ answerMsg request ("quote quick [nickname] [quote]")
+                             lift $ answerMsg request ("  Performs a single line quote.")
+                         "start" -> do
+                             lift $ answerMsg request ("quote start [nickname] [quote]")
+                             lift $ answerMsg request ("  Begins a multi lines quote. Use either append to append new lines, or commit to terminate the quoting process.")
+                         "append" -> do
+                             lift $ answerMsg request ("quote append [quoteId] [nickname] [quote]")
+                             lift $ answerMsg request ("  Continue a multi line quote by appending to it.")
+                         "commit" -> do
+                             lift $ answerMsg request ("quote commit [quoteId]")
+                             lift $ answerMsg request ("  Terminates a multi lines quote.")
+                         _ -> lift $ answerMsg request ("Usage: quote [append|commit|help|quick|start] {quoteId} {nickname} {quote}")
       | cmd == "quick" = do
           quoteBot <- get
           now <- liftIO $ getCurrentTime
