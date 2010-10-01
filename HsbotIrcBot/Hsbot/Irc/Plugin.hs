@@ -40,24 +40,25 @@ loadIrcPlugin :: String -> IrcBot ()
 loadIrcPlugin pluginName = do
     ircbot <- get
     let masterChan  = ircBotChan ircbot
-    pluginChan <- liftIO (newChan :: IO (Chan IrcBotMsg))
-    let entryPoint = case pluginName of
-                        "Core"  -> ircBotPluginCore
-                        "Ping"  -> ircBotPluginPing
-                        "Quote" -> ircBotPluginQuote
-                        _       -> ircBotPluginDummy
-    let oldPlugins    = ircBotPlugins ircbot
-    -- We check for unicity
-    case M.lookup pluginName oldPlugins of
-        Just _  -> return ()
-        Nothing -> do
-            mvar <- liftIO newEmptyMVar
-            threadId <- liftIO . forkIO $ finally (entryPoint pluginChan masterChan) (putMVar mvar ())
-            let plugin        = IrcPluginState { ircPluginName       = pluginName
-                                               , ircPluginChan       = pluginChan
-                                               , ircPluginMasterChan = masterChan }
-                newPlugins    = M.insert pluginName (plugin, mvar, threadId) oldPlugins
-            put $ ircbot { ircBotPlugins    = newPlugins }
+        (entryPoint, loadIt) = case pluginName of
+            "Core"  -> (ircBotPluginCore, True)
+            "Ping"  -> (ircBotPluginPing, True)
+            "Quote" -> (ircBotPluginQuote, True)
+            _       -> (ircBotPluginDummy, False)
+    when loadIt $ do
+        pluginChan <- liftIO (newChan :: IO (Chan IrcBotMsg))
+        let oldPlugins    = ircBotPlugins ircbot
+        -- We check for unicity
+        case M.lookup pluginName oldPlugins of
+            Just _  -> return ()
+            Nothing -> do
+                mvar <- liftIO newEmptyMVar
+                threadId <- liftIO . forkIO $ finally (entryPoint pluginChan masterChan) (putMVar mvar ())
+                let plugin        = IrcPluginState { ircPluginName       = pluginName
+                                                   , ircPluginChan       = pluginChan
+                                                   , ircPluginMasterChan = masterChan }
+                    newPlugins    = M.insert pluginName (plugin, mvar, threadId) oldPlugins
+                put $ ircbot { ircBotPlugins    = newPlugins }
 
 -- | Sends a list of loaded plugins
 listPlugins :: IrcMsg -> String -> IrcBot ()
