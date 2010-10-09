@@ -29,7 +29,7 @@ Executable hsbot-irc
                     MissingH,
                     mtl,
                     network,
-                    parsec >= 3,
+                    parsec,
                     random,
                     text,
                     time,

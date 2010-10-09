@@ -8,7 +8,7 @@ module Hsbot.Irc.Message
     ) where
 
 import Control.Monad.Identity
-import Text.Parsec
+import Text.ParserCombinators.Parsec
 
 -- | An IRC message
 data IrcMsg = IrcMsg
@@ -35,7 +35,7 @@ data IrcBotMsg = InIrcMsg IrcMsg | OutIrcMsg IrcMsg | IntIrcCmd IrcCmd deriving 
 parseIrcMsg :: String -> Either ParseError IrcMsg
 parseIrcMsg line = parse pMsg "" line
 
-pMsg :: ParsecT String u Identity IrcMsg
+--pMsg :: Parser String u Identity IrcMsg
 pMsg = do
     pfx <- optionMaybe pPrefix
     cmd <- pCommand
@@ -44,20 +44,20 @@ pMsg = do
     eof
     return $ IrcMsg pfx cmd params
 
-pPrefix :: ParsecT String u Identity [Char]
+--pPrefix :: Parser String u Identity [Char]
 pPrefix = do
     _ <- char ':'
     pfx <- many1 (noneOf " ")
     _ <- space
     return pfx
 
-pCommand :: ParsecT String u Identity [Char]
+--pCommand :: Parser String u Identity [Char]
 pCommand = count 3 digit <|> many1 upper
 
-pLongParam :: ParsecT String u Identity [Char]
+--pLongParam :: Parser String u Identity [Char]
 pLongParam = char ':' >> (many1 (noneOf "\r"))
 
-pShortParam :: ParsecT String u Identity [Char]
+--pShortParam :: Parser String u Identity [Char]
 pShortParam = many1 (noneOf " \r")
 
 -- | Serialize an IRC message to a string.
