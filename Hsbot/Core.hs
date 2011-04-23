@@ -7,8 +7,10 @@ module Hsbot.Core
 import Control.Concurrent
 import Control.Exception (IOException, catch)
 import Control.Monad.Reader
+import Control.Monad.State
 import qualified Data.ByteString.Char8 as C
 import qualified Data.ByteString.Lazy as L
+import qualified Data.Map as M
 import Network
 import qualified Network.IRC as IRC
 import Network.BSD (getHostName)
@@ -51,31 +53,43 @@ initHsbot config = do
 
 runHsbot :: Env IO (BotStatus)
 runHsbot = do
-    -- First we say hello
-    env <- ask
-    hostname <- liftIO getHostName
-    let connhdl  = envHandle env
-        tlsCtx   = envTLSCtx env
-        config   = envConfig env
-        nickname = head $ configNicknames config
-        channels = configChannels config
-    liftIO . sendStrToClient connhdl tlsCtx . IRC.encode $ IRC.nick nickname
-    liftIO . sendStrToClient connhdl tlsCtx . IRC.encode $ IRC.user nickname hostname "*" (configRealname config)
-    mapM_ (liftIO . sendStrToClient connhdl tlsCtx . IRC.encode . IRC.joinChan) channels
-    -- Next we spawn the reader thread
-    liftIO $ debugM "Hsbot.Core" $ "Spawning reader thread"
-    myOwnThreadId  <- liftIO $ myThreadId
-    chan <- asks envChan
-    (liftIO . forkIO $ botReader connhdl tlsCtx chan myOwnThreadId) >>= addThreadIdToQuitMVar
-    -- Then we spawn all plugins
-    -- asks envSocket  >>= mapM_ ( ----- what's next? the core server handling! ----- )
-    -- Finally we spawn the main bot loop
-    --
-    -- We wait for the quit signal
-    code <- asks envQuitMv >>= liftIO . takeMVar
-    -- and we clean things up
-    asks envThreadIdsMv >>= liftIO . readMVar >>= liftIO . mapM_ killThread
-    return code
+    let bot = BotState { botPlugins  = M.empty
+                       , botHooks    = []
+                       , botChannels = []
+                       , botNickname = [] }
+    evalStateT trueRunHsbot bot
+  where
+    trueRunHsbot :: Bot (Env IO) (BotStatus)
+    trueRunHsbot = do
+        -- First we say hello
+        env <- lift ask
+        hostname <- liftIO getHostName
+        let connhdl  = envHandle env
+            tlsCtx   = envTLSCtx env
+            config   = envConfig env
+            nickname = head $ configNicknames config
+            channels = configChannels config
+        liftIO . sendStr connhdl tlsCtx . IRC.encode $ IRC.nick nickname
+        liftIO . sendStr connhdl tlsCtx . IRC.encode $ IRC.user nickname hostname "*" (configRealname config)
+        mapM_ (liftIO . sendStr connhdl tlsCtx . IRC.encode . IRC.joinChan) channels
+        -- Next we spawn the reader thread
+        liftIO $ debugM "Hsbot.Core" $ "Spawning reader thread"
+        myOwnThreadId  <- liftIO $ myThreadId
+        chan <- lift $ asks envChan
+        (liftIO . forkIO $ botReader connhdl tlsCtx chan myOwnThreadId) >>= lift . addThreadIdToQuitMVar
+        -- Then we spawn all plugins
+        -- asks envSocket  >>= mapM_ ( ----- what's next? the core server handling! ----- )
+        -- Finally we spawn the main bot loop
+        bot <- get
+        finalStateMVar <- liftIO newEmptyMVar
+        (liftIO . forkIO $ runReaderT (execStateT botLoop bot >>= storeFinalState finalStateMVar) env) >>= lift . addThreadIdToQuitMVar
+        -- We wait for the quit signal
+        code <- asks envQuitMv >>= liftIO . takeMVar
+        -- and we clean things up
+        asks envThreadIdsMv >>= liftIO . readMVar >>= liftIO . mapM_ killThread
+        return code
+    storeFinalState :: MVar BotState -> BotState -> Env IO ()
+    storeFinalState finalStateMVar finalState = liftIO $ putMVar finalStateMVar finalState
 
 botReader :: Handle -> Maybe TLSCtx -> Chan Message -> ThreadId -> IO ()
 botReader _ (Just ctx) chan _ = forever $
@@ -89,6 +103,20 @@ botReader handle Nothing chan fatherThreadId = forever $
         myId <- myThreadId
         killThread myId
         return ""
+
+botLoop :: Bot (Env IO) ()
+botLoop = do
+    chan <- lift $ asks envChan
+    hooks <- gets botHooks
+    msg  <- liftIO $ readChan chan
+    mapM_ (liftIO . flip writeChan msg) hooks
+    case msg of
+        IncomingMsg _ -> return () -- TODO parse for core commands
+        OutgoingMsg outMsg -> do
+            env <- lift ask
+            let connhdl  = envHandle env
+                tlsCtx   = envTLSCtx env
+            liftIO . sendStr connhdl tlsCtx $ IRC.encode outMsg
 
 handleIncomingStr :: Chan Message -> String -> IO ()
 handleIncomingStr chan str = do

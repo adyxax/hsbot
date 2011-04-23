@@ -5,6 +5,8 @@ module Hsbot.Types
     , BotEnv (..)
     , Env
     , Message (..)
+    , Plugin
+    , PluginId (..)
     , PluginState (..)
     ) where
 
@@ -12,11 +14,11 @@ import Control.Concurrent
 import qualified Data.Map as M
 import Control.Monad.Reader
 import Control.Monad.State
-import qualified Network.IRC as IRC
 import Network.TLS
 import System.IO
 
 import Hsbot.Config
+import Hsbot.Message
 
 -- The bot environment
 type Env = ReaderT BotEnv
@@ -36,19 +38,24 @@ type Bot = StateT BotState
 
 data BotState = BotState
     { botPlugins  :: M.Map String (PluginState, MVar (), ThreadId)
-    , botCommands :: M.Map String [String]
+    , botHooks    :: [Chan Message]
     , botChannels :: [String]
     , botNickname :: String
     }
 
 -- The Plugin monad
+type Plugin = StateT PluginState
+
 data PluginState = PluginState
+    { pluginId     :: PluginId
+    , pluginChan   :: Chan Message
+    , pluginMaster :: Chan Message
+    }
+
+data PluginId = PluginId
     { pluginName :: String
-    , pluginChan :: Chan Message
+    , pluginEp   :: PluginState -> IO ()
     }
 
 data BotStatus = BotContinue | BotExit | BotReload | BotRestart deriving (Show)
-
-data Message = IncomingMsg IRC.Message
-             | OutgoingMsg IRC.Message
 
