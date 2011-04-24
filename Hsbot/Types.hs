@@ -3,22 +3,23 @@ module Hsbot.Types
     , BotState (..)
     , BotStatus (..)
     , BotEnv (..)
+    , Config (..)
     , Env
     , Message (..)
     , Plugin
     , PluginId (..)
     , PluginState (..)
+    , TLSConfig (..)
     ) where
 
 import Control.Concurrent
 import qualified Data.Map as M
 import Control.Monad.Reader
 import Control.Monad.State
+import Network
+import qualified Network.IRC as IRC
 import Network.TLS
 import System.IO
-
-import Hsbot.Config
-import Hsbot.Message
 
 -- The bot environment
 type Env = ReaderT BotEnv
@@ -57,5 +58,30 @@ data PluginId = PluginId
     , pluginEp   :: PluginState -> IO ()
     }
 
+-- Messaging
+data Message = IncomingMsg IRC.Message
+             | OutgoingMsg IRC.Message
+
 data BotStatus = BotContinue | BotExit | BotReload | BotRestart deriving (Show)
+
+-- Config
+data Config = Config
+    { configErrors    :: Maybe String
+    , configTLS       :: TLSConfig
+    , configAddress   :: String
+    , configPort      :: PortID
+    , configChannels  :: [String]
+    , configNicknames :: [String]
+    , configRealname  :: String
+    , configPlugins   :: [(String, Chan Message -> Chan Message -> IO ())]
+    }
+
+data TLSConfig = TLSConfig
+    { sslOn       :: Bool
+    , sslCert     :: String
+    , sslKey      :: String
+    , sslVersions :: [Network.TLS.Version]
+    , sslCiphers  :: [Network.TLS.Cipher]
+    , sslVerify   :: Bool
+    } deriving (Show)
 

@@ -1,28 +1,14 @@
 module Hsbot.Config
-    ( Config (..)
-    , TLSConfig (..)
-    , defaultConfig
+    ( defaultConfig
     , defaultTLSConfig
     , noSSL
     ) where
 
-import Control.Concurrent.Chan
 import Network
-import qualified Network.IRC as IRC
 import Network.TLS
 import Network.TLS.Extra
 
-import Hsbot.Message
-data Config = Config
-    { configErrors    :: Maybe String
-    , configTLS       :: TLSConfig
-    , configAddress   :: String
-    , configPort      :: PortID
-    , configChannels  :: [String]
-    , configNicknames :: [String]
-    , configRealname  :: String
-    , configPlugins   :: [(String, Chan Message -> Chan Message -> IO ())]
-    }
+import Hsbot.Types
 
 defaultConfig :: Config
 defaultConfig = Config
@@ -34,15 +20,6 @@ defaultConfig = Config
     , configNicknames = ["hsbot"]
     , configRealname  = "The One True bot, with it's haskell soul."
     , configPlugins   = [] }
-
-data TLSConfig = TLSConfig
-    { sslOn       :: Bool
-    , sslCert     :: String
-    , sslKey      :: String
-    , sslVersions :: [Network.TLS.Version]
-    , sslCiphers  :: [Network.TLS.Cipher]
-    , sslVerify   :: Bool
-    } deriving (Show)
 
 defaultTLSConfig :: TLSConfig
 defaultTLSConfig = TLSConfig

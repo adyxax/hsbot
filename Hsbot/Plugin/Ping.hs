@@ -11,7 +11,6 @@ import Prelude hiding (catch)
 
 import Hsbot.Message
 import Hsbot.Types
-import Hsbot.Utils
 
 pingId :: PluginId
 pingId = PluginId

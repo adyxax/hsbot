@@ -7,7 +7,6 @@ import Config.Dyre.Relaunch
 import Control.Monad.Reader
 import System.Log.Logger
 
-import Hsbot.Config
 import Hsbot.Core
 import Hsbot.Types
 

@@ -19,7 +19,6 @@ import Prelude hiding (catch)
 import System.IO
 import System.Log.Logger
 
-import Hsbot.Config
 import Hsbot.Types
 import Hsbot.Utils
 

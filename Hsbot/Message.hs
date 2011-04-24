@@ -1,9 +1,21 @@
 module Hsbot.Message
-    ( Message (..)
+    ( readMsg
+    , writeMsg
     ) where
 
-import qualified Network.IRC as IRC
+import Control.Concurrent
+import Control.Monad.State
 
-data Message = IncomingMsg IRC.Message
-             | OutgoingMsg IRC.Message
+import Hsbot.Types
+
+-- Plugin Utils
+readMsg :: Plugin IO (Message)
+readMsg = do
+    chan <- gets pluginChan
+    liftIO $ readChan chan >>= return
+
+writeMsg :: Message -> Plugin IO ()
+writeMsg msg = do
+   chan <- gets pluginMaster
+   liftIO $ writeChan chan msg
 

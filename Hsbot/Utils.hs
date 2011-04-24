@@ -4,16 +4,13 @@ module Hsbot.Utils
     , first
     , initTLSEnv
     , readCertificate
-    , readMsg
     , readPrivateKey
     , sendStr
     , setGlobalQuitMVar
-    , writeMsg
     ) where
 
 import Control.Concurrent
 import Control.Monad.Reader
-import Control.Monad.State
 import qualified Crypto.Cipher.RSA as RSA
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as C
@@ -25,8 +22,6 @@ import Data.List
 import Network.TLS
 import System.IO
 
-import Hsbot.Config
-import Hsbot.Message
 import Hsbot.Types
 
 -- utility functions
@@ -52,17 +47,6 @@ first (a, _, _) = a
 sendStr :: Handle -> Maybe TLSCtx -> String -> IO ()
 sendStr _ (Just ctx) msg = sendData ctx $ L.fromChunks [C.pack msg]
 sendStr handle Nothing msg = hPutStrLn handle msg
-
--- Plugin Utils
-readMsg :: Plugin IO (Message)
-readMsg = do
-    chan <- gets pluginChan
-    liftIO $ readChan chan >>= return
-
-writeMsg :: Message -> Plugin IO ()
-writeMsg msg = do
-   chan <- gets pluginMaster
-   liftIO $ writeChan chan msg
 
 -- TLS utils
 initTLSEnv :: TLSConfig -> IO (TLSParams)
