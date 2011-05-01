@@ -27,7 +27,7 @@ type Env = ReaderT BotEnv
 data BotEnv = BotEnv
     { envHandle      :: Handle
     , envChan        :: Chan Message
-    , envQuitMv      :: MVar (BotStatus)
+    , envQuitMv      :: MVar BotStatus
     , envThreadIdsMv :: MVar [ThreadId]
     , envConfig      :: Config
     , envTLS         :: Maybe TLSParams

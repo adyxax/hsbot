@@ -22,7 +22,7 @@ startHsbot config = do
     -- main stuff
     infoM "Hsbot" "Bot core starting"
     status <- runReaderT runHsbot hsbotEnv
-    infoM "Hsbot" $ "Bot core exited with status " ++ (show status)
+    infoM "Hsbot" $ "Bot core exited with status " ++ show status
     -- Handling exit signal
     case status of
          BotContinue -> startHsbot config -- TODO do something not so dumb about starting over
@@ -34,5 +34,5 @@ hsbot :: Config -> IO ()
 hsbot = Dyre.wrapMain $ Dyre.defaultParams
     { Dyre.projectName = "hsbot"
     , Dyre.realMain    = startHsbot
-    , Dyre.showError   = (\config err -> config { configErrors = Just err }) }
+    , Dyre.showError   = \config err -> config { configErrors = Just err } }
 

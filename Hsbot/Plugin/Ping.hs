@@ -24,7 +24,7 @@ thePing = forever $ do
   where
     eval :: Message -> Plugin (Env IO) ()
     eval (IncomingMsg msg)
-        | (IRC.msg_command msg) == "PING" = writeMsg . OutgoingMsg . IRC.Message Nothing "PONG" $ IRC.msg_params msg
+        | IRC.msg_command msg == "PING" = writeMsg . OutgoingMsg . IRC.Message Nothing "PONG" $ IRC.msg_params msg
         | otherwise = return ()
     eval _ = return ()
 

@@ -11,8 +11,8 @@ import qualified Network.IRC as IRC
 import Hsbot.Types
 
 -- Plugin Utils
-readMsg :: Plugin (Env IO) (Message)
-readMsg = gets pluginChan >>= liftIO . readChan >>= return
+readMsg :: Plugin (Env IO) Message
+readMsg = gets pluginChan >>= liftIO . readChan
 
 writeMsg :: Message -> Plugin (Env IO) ()
 writeMsg msg = gets pluginMaster >>= liftIO . flip writeChan msg
