@@ -25,7 +25,8 @@ import System.IO
 type Env = ReaderT BotEnv
 
 data BotEnv = BotEnv
-    { envHandle      :: Handle
+    { envBotState    :: MVar BotState
+    , envHandle      :: Handle
     , envChan        :: Chan Message
     , envQuitMv      :: MVar BotStatus
     , envThreadIdsMv :: MVar [ThreadId]
