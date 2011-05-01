@@ -1,5 +1,5 @@
 Name:               hsbot
-Version:            0.4.1
+Version:            0.4.4
 Cabal-version:      >=1.2
 Synopsis:           A multipurposes IRC bot
 Description:
@@ -19,11 +19,10 @@ Build-type:         Simple
 Library
   ghc-options: -Wall
   exposed-modules:  Hsbot
-                    --Hsbot.Command
                     Hsbot.Config
                     Hsbot.Core
                     Hsbot.Message
-                    --Hsbot.Plugin
+                    Hsbot.Plugin
                     Hsbot.Plugin.Ping
                     Hsbot.Types
                     Hsbot.Utils

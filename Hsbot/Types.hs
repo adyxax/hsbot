@@ -38,7 +38,7 @@ data BotEnv = BotEnv
 type Bot = StateT BotState
 
 data BotState = BotState
-    { botPlugins  :: M.Map String (PluginState, MVar (), ThreadId)
+    { botPlugins  :: M.Map String (PluginState, MVar PluginState, ThreadId)
     , botHooks    :: [Chan Message]
     , botChannels :: [String]
     , botNickname :: String
@@ -55,7 +55,7 @@ data PluginState = PluginState
 
 data PluginId = PluginId
     { pluginName :: String
-    , pluginEp   :: PluginState -> IO ()
+    , pluginEp   :: Plugin (Env IO) ()
     }
 
 -- Messaging
@@ -73,7 +73,7 @@ data Config = Config
     , configChannels  :: [String]
     , configNicknames :: [String]
     , configRealname  :: String
-    , configPlugins   :: [(String, Chan Message -> Chan Message -> IO ())]
+    , configPlugins   :: [PluginId]
     }
 
 data TLSConfig = TLSConfig

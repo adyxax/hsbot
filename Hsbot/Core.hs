@@ -19,6 +19,7 @@ import Prelude hiding (catch)
 import System.IO
 import System.Log.Logger
 
+import Hsbot.Plugin
 import Hsbot.Types
 import Hsbot.Utils
 
@@ -77,7 +78,7 @@ runHsbot = do
         chan <- lift $ asks envChan
         (liftIO . forkIO $ botReader connhdl tlsCtx chan myOwnThreadId) >>= lift . addThreadIdToQuitMVar
         -- Then we spawn all plugins
-        -- asks envSocket  >>= mapM_ ( ----- what's next? the core server handling! ----- )
+        (lift $ asks envConfig) >>= mapM_ loadPlugin . configPlugins
         -- Finally we spawn the main bot loop
         bot <- get
         finalStateMVar <- liftIO newEmptyMVar
@@ -86,6 +87,7 @@ runHsbot = do
         code <- asks envQuitMv >>= liftIO . takeMVar
         -- and we clean things up
         asks envThreadIdsMv >>= liftIO . readMVar >>= liftIO . mapM_ killThread
+        -- TODO : kill plugin threads
         return code
     storeFinalState :: MVar BotState -> BotState -> Env IO ()
     storeFinalState finalStateMVar finalState = liftIO $ putMVar finalStateMVar finalState
@@ -103,8 +105,16 @@ botReader handle Nothing chan fatherThreadId = forever $
         killThread myId
         return ""
 
+handleIncomingStr :: Chan Message -> String -> IO ()
+handleIncomingStr chan str = do
+    case IRC.decode str of
+        Just msg -> do
+            debugM "Ircd.Reader" $ "<-- " ++ (show msg)
+            writeChan chan $ IncomingMsg msg
+        Nothing -> debugM "Ircd.Reader" $ "Error: couldn't decode : " ++ str     -- TODO: spam control
+
 botLoop :: Bot (Env IO) ()
-botLoop = do
+botLoop = forever $ do
     chan <- lift $ asks envChan
     hooks <- gets botHooks
     msg  <- liftIO $ readChan chan
@@ -115,15 +125,8 @@ botLoop = do
             env <- lift ask
             let connhdl  = envHandle env
                 tlsCtx   = envTLSCtx env
+            liftIO $ debugM "Ircd.Reader" $ "--> " ++ (show outMsg)
             liftIO . sendStr connhdl tlsCtx $ IRC.encode outMsg
-
-handleIncomingStr :: Chan Message -> String -> IO ()
-handleIncomingStr chan str = do
-    case IRC.decode str of
-        Just msg -> do
-            debugM "Ircd.Reader" $ "<-- " ++ (show msg)
-            writeChan chan $ IncomingMsg msg
-        Nothing -> debugM "Ircd.Reader" $ "Error: couldn't decode : " ++ str     -- TODO: spam control
 
 terminateHsbot :: Env IO ()
 terminateHsbot = do
