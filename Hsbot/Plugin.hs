@@ -13,7 +13,7 @@ import Hsbot.Types
 loadPlugin :: PluginId -> Env IO ()
 loadPlugin pId = do
     botMVar <- asks envBotState
-    (liftIO $ takeMVar botMVar) >>= execStateT effectivelyLoadPlugin >>= liftIO . putMVar botMVar
+    liftIO (takeMVar botMVar) >>= execStateT effectivelyLoadPlugin >>= liftIO . putMVar botMVar
   where
     effectivelyLoadPlugin :: Bot (Env IO) ()
     effectivelyLoadPlugin = do

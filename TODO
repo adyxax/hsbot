@@ -1,8 +1,16 @@
+* owner rights
+* better hooks?
+
+
+
+
+
+
+
 :julien!~julien@ogu21.corp PRIVMSG #shbot :@quote graou snif
 
 * Improve configuration file errors display
 * fork process in background
-* implement logging capabilities
 
 * add a function to answer by /msg to somebody
 * write the vote system for the quote module

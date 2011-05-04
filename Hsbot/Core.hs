@@ -75,10 +75,10 @@ runHsbot = do
         -- Then we join channels
         mapM_ (liftIO . sendStr connhdl tlsCtx . IRC.encode . IRC.joinChan) channels
         -- Finally we set the new bot state
-        asks envBotState >>= liftIO . (flip putMVar BotState { botPlugins  = M.empty
-                                                             , botHooks    = []
-                                                             , botChannels = channels
-                                                             , botNickname = nickname })
+        asks envBotState >>= liftIO . flip putMVar BotState { botPlugins  = M.empty
+                                                            , botHooks    = []
+                                                            , botChannels = channels
+                                                            , botNickname = nickname }
     -- | Run the bot itself
     trueRunHsbot :: Env IO BotStatus
     trueRunHsbot = do
