@@ -1,5 +1,5 @@
 Name:               hsbot
-Version:            0.4.5
+Version:            0.4.6
 Cabal-version:      >=1.2
 Synopsis:           A multipurposes IRC bot
 Description:
@@ -31,14 +31,15 @@ Library
                     bytestring,
                     certificate,
                     containers,
+                    crypto-api,
                     cryptocipher,
                     dyre,
                     hslogger,
                     irc,
                     mtl,
                     network,
-                    tls >= 0.5.1,
-                    tls-extra >= 0.1.2
+                    tls >= 0.6.1,
+                    tls-extra >= 0.2.0
 
 
 Executable hsbot

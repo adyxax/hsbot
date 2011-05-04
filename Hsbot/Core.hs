@@ -7,6 +7,7 @@ module Hsbot.Core
 import Control.Concurrent
 import Control.Exception (IOException, catch)
 import Control.Monad.Reader
+import Crypto.Random
 import qualified Data.ByteString.Char8 as C
 import qualified Data.ByteString.Lazy as L
 import qualified Data.Map as M
@@ -38,7 +39,7 @@ initHsbot config = do
         then (do
             infoM "Hsbot.Core" "TLS init"
             tlsenv <- initTLSEnv (configTLS config)
-            randomGen <- makeSRandomGen >>= either (fail . show) (return . id)
+            randomGen <- newGenIO :: IO SystemRandom
             sCtx <- client tlsenv randomGen connhdl
             handshake sCtx
             return (Just tlsenv, Just sCtx))
