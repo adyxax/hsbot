@@ -1,3 +1,4 @@
+-- | This module is an IRC plugin that generates and kills ducks
 module Hsbot.Plugin.Duck
     ( duck
     , theDuck
@@ -12,12 +13,13 @@ import Prelude hiding (catch)
 import Hsbot.Message
 import Hsbot.Types
 
+-- | The duck plugin identity
 duck :: PluginId
 duck = PluginId
     { pluginName = "duck"
     , pluginEp   = theDuck }
 
--- | The IrcPlugin monad main function
+-- | An IRC plugin that generates and kills ducks
 theDuck :: Plugin (Env IO) ()
 theDuck = forever $ do
     msg <- readMsg
@@ -25,14 +27,21 @@ theDuck = forever $ do
   where
     eval :: Message -> Plugin (Env IO) ()
     eval (IncomingMsg msg)
-        | IRC.msg_command msg == "PRIVMSG" = answerMsg msg . concat . isThereADuckToKillInThere . concat $ IRC.msg_params msg
+        | IRC.msg_command msg == "PRIVMSG" = answerMsg msg . isThereADuckToKillInThere . concat $ IRC.msg_params msg
         | otherwise = return ()
     eval _ = return ()
 
-isThereADuckToKillInThere :: String -> [String]
-isThereADuckToKillInThere = concatMap (\y -> map (\x -> if x `L.isInfixOf` y then "PAN! " else "") ducks) . words
+-- | Shoot as many times are there are ducks in the initial string
+isThereADuckToKillInThere :: String -> String
+isThereADuckToKillInThere = concat . concatMap (\y -> map (\x -> if x `L.isInfixOf` y then "PAN! " else "") ducks) . words
 
+-- | There are many ways to hide as a duck, this function tries to cover most of them
 ducks :: [String]
-ducks = ["\\_o<", "\\_O<", "\\_o>", "\\_O>", "\\o<", "\\O<", "\\o>", "\\O>",
-         ">o_/", ">O_/", "<o_/", "<O_/", ">o/", ">O/", "<o/", "<O/" ]
+ducks = [ x : y : z | x <- nose, y <- face, z <- ["__/", "_/", "/"] ]
+     ++ [ L.reverse $ x : y : z | x <- nose, y <- face, z <- ["__\\", "_\\", "\\"] ]
+  where
+    nose :: [Char]
+    nose = "<>="
+    face :: [Char]
+    face = "oO°@©®ð*òôóø"
 
