@@ -1,5 +1,5 @@
 Name:               hsbot
-Version:            0.4.9
+Version:            0.4.10
 Cabal-version:      >=1.2
 Synopsis:           A multipurposes IRC bot
 Description:
@@ -39,6 +39,7 @@ Library
                     irc,
                     mtl,
                     network,
+                    random,
                     tls >= 0.6.1,
                     tls-extra >= 0.2.0
 
