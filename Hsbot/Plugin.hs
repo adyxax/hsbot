@@ -23,19 +23,16 @@ loadPlugin pId = do
         let name = pluginName pId
             loop = pluginEp pId
             oldPlugins = botPlugins bot
-            pState = PluginState { pluginId     = pId
-                                 , pluginChan   = chan
-                                 , pluginMaster = master }
+            pEnv = PluginEnv { pluginId     = pId
+                             , pluginChan   = chan
+                             , pluginMaster = master }
         case M.lookup name oldPlugins of
             Just _  -> liftIO . warningM "Hsbot.Core.LoadPlugin" $ "Not loading already loaded plugin : " ++ name
             Nothing -> do
                 liftIO . infoM "Hsbot.Core.LoadPlugin" $ "Loading plugin : " ++ name
                 env <- lift ask
-                finalStateMVar <- liftIO newEmptyMVar
-                threadId <- liftIO . forkIO $ runReaderT (execStateT loop pState >>= storeFinalState finalStateMVar) env
-                let newPlugins = M.insert name (pState, finalStateMVar, threadId) oldPlugins
+                threadId <- liftIO . forkIO $ runReaderT (runReaderT loop pEnv) env
+                let newPlugins = M.insert name (pEnv, threadId) oldPlugins
                 put $ bot { botPlugins = newPlugins
                           , botHooks   = chan : botHooks bot }
-    storeFinalState :: MVar PluginState -> PluginState -> Env IO ()
-    storeFinalState finalStateMVar finalState = liftIO $ putMVar finalStateMVar finalState
 

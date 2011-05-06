@@ -6,7 +6,7 @@ module Hsbot.Plugin.Duck
 
 import Control.Concurrent.Chan ()
 import qualified Data.List as L
-import Control.Monad.State
+import Control.Monad.Reader
 import qualified Network.IRC as IRC
 import Prelude hiding (catch)
 

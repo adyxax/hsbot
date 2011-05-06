@@ -4,7 +4,7 @@ module Hsbot.Plugin.Ping
     ) where
 
 import Control.Concurrent.Chan ()
-import Control.Monad.State
+import Control.Monad.Reader
 import qualified Network.IRC as IRC
 import Prelude hiding (catch)
 

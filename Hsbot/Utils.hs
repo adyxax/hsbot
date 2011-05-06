@@ -1,7 +1,6 @@
 module Hsbot.Utils
     ( addThreadIdToQuitMVar
     , delThreadIdFromQuitMVar
-    , first
     , initTLSEnv
     , readCertificate
     , readPrivateKey
@@ -40,9 +39,6 @@ setGlobalQuitMVar :: BotStatus -> Env IO ()
 setGlobalQuitMVar status = do
     quitMv <- asks envQuitMv
     liftIO $ putMVar quitMv status
-
-first :: (a, b, c) -> a
-first (a, _, _) = a
 
 -- Helpers
 sendStr :: Handle -> Maybe TLSCtx -> String -> IO ()

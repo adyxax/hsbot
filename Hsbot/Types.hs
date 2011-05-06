@@ -7,8 +7,8 @@ module Hsbot.Types
     , Env
     , Message (..)
     , Plugin
+    , PluginEnv (..)
     , PluginId (..)
-    , PluginState (..)
     , TLSConfig (..)
     ) where
 
@@ -39,16 +39,16 @@ data BotEnv = BotEnv
 type Bot = StateT BotState
 
 data BotState = BotState
-    { botPlugins  :: M.Map String (PluginState, MVar PluginState, ThreadId)
+    { botPlugins  :: M.Map String (PluginEnv, ThreadId)
     , botHooks    :: [Chan Message]
     , botChannels :: [String]
     , botNickname :: String
     }
 
 -- The Plugin monad
-type Plugin = StateT PluginState
+type Plugin = ReaderT PluginEnv
 
-data PluginState = PluginState
+data PluginEnv = PluginEnv
     { pluginId     :: PluginId
     , pluginChan   :: Chan Message
     , pluginMaster :: Chan Message

@@ -5,17 +5,17 @@ module Hsbot.Message
     ) where
 
 import Control.Concurrent
-import Control.Monad.State
+import Control.Monad.Reader
 import qualified Network.IRC as IRC
 
 import Hsbot.Types
 
 -- Plugin Utils
 readMsg :: Plugin (Env IO) Message
-readMsg = gets pluginChan >>= liftIO . readChan
+readMsg = asks pluginChan >>= liftIO . readChan
 
 writeMsg :: Message -> Plugin (Env IO) ()
-writeMsg msg = gets pluginMaster >>= liftIO . flip writeChan msg
+writeMsg msg = asks pluginMaster >>= liftIO . flip writeChan msg
 
 answerMsg :: IRC.Message -> String -> Plugin (Env IO) ()
 answerMsg request msg =
