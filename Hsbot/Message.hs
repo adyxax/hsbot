@@ -18,8 +18,9 @@ writeMsg :: Message -> Plugin (Env IO) ()
 writeMsg msg = asks pluginMaster >>= liftIO . flip writeChan msg
 
 answerMsg :: IRC.Message -> String -> Plugin (Env IO) ()
-answerMsg request msg =
-    case IRC.msg_params request of
-        sender:_ -> writeMsg . OutgoingMsg $ IRC.Message Nothing "PRIVMSG" [sender, msg]
-        [] -> return ()
+answerMsg _ [] = return ()
+answerMsg (IRC.Message (Just (IRC.NickName nick _ _)) _ (channel:_)) msg
+    | head channel == '#' = writeMsg . OutgoingMsg $ IRC.Message Nothing "PRIVMSG" [channel, msg]
+    | otherwise = writeMsg . OutgoingMsg $ IRC.Message Nothing "PRIVMSG" [nick, msg]
+answerMsg _ _ = return ()
 
