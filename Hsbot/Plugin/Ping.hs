@@ -18,9 +18,7 @@ ping = PluginId
 
 -- | The IrcPlugin monad main function
 thePing :: Plugin (Env IO) ()
-thePing = forever $ do
-    msg <- readMsg
-    eval msg
+thePing = forever $ readMsg >>= eval
   where
     eval :: Message -> Plugin (Env IO) ()
     eval (IncomingMsg msg)
