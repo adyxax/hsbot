@@ -1,6 +1,7 @@
 module Hsbot.Message
     ( answerMsg
     , getCommand
+    , getDestination
     , readMsg
     , writeMsg
     ) where
@@ -35,4 +36,9 @@ getCommand (IRC.Message _ _ (_:msg:[])) = do
         then return stuff
         else return []
 getCommand _ = return []
+
+-- | Get the destination of a message
+getDestination :: IRC.Message -> String
+getDestination (IRC.Message _ _ (dest:_:[])) = dest
+getDestination _ = ""
 
