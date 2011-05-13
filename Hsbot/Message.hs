@@ -2,6 +2,7 @@ module Hsbot.Message
     ( answerMsg
     , getCommand
     , getDestination
+    , getSender
     , readMsg
     , writeMsg
     ) where
@@ -36,6 +37,10 @@ getCommand (IRC.Message _ _ (_:msg:[])) = do
         then return stuff
         else return []
 getCommand _ = return []
+
+getSender :: IRC.Message -> String
+getSender (IRC.Message (Just (IRC.NickName nick _ _)) _ _) = nick
+getSender _ = ""
 
 -- | Get the destination of a message
 getDestination :: IRC.Message -> String
