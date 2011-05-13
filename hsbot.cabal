@@ -1,5 +1,5 @@
 Name:               hsbot
-Version:            0.4.14
+Version:            0.4.15
 Cabal-version:      >=1.2
 Synopsis:           A multipurposes IRC bot
 Description:
@@ -28,7 +28,8 @@ Library
                     Hsbot.Types
                     Hsbot.Utils
   Extensions:       DeriveDataTypeable FlexibleContexts ScopedTypeVariables
-  Build-depends:    base >= 4.1 && < 5,
+  Build-depends:    acid-state,
+                    base >= 4.1 && < 5,
                     bytestring,
                     certificate,
                     containers,
@@ -40,8 +41,10 @@ Library
                     mtl,
                     network,
                     random,
+                    safecopy,
                     tls >= 0.6.1,
-                    tls-extra >= 0.2.0
+                    tls-extra >= 0.2.0,
+                    xdg-basedir
 
 
 Executable hsbot
