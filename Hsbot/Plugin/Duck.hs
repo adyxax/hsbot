@@ -147,13 +147,11 @@ someRandomDuck = do
 
 -- | There are many ways to hide as a duck, this function tries to cover most of them
 ducks :: [String]
-ducks = [ x : y : z | x <- nose, y <- face, z <- ["__/", "_/", "/"] ]
-     ++ [ L.reverse $ x : y : z | x <- nose, y <- face, z <- ["__\\", "_\\", "\\"] ]
+ducks = [ x : y : z | x <- ">=", y <- face, z <- ["__/", "_/"] ]
+     ++ [ L.reverse $ x : y : z | x <- "<=", y <- face, z <- ["__\\", "_\\"] ]
   where
-    nose :: String
-    nose = "<>="
     face :: String
-    face = "oO°@©®ð*òôóø"
+    face = "oO°@©®ð*òôóø⊕Ω"
 
 -- | Weapons can have different noises
 bangs :: [String]
