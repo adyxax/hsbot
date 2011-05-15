@@ -61,7 +61,6 @@ scoreAction sender rounds shots kills = do
 getDuckStats :: Query StatDB StatDB
 getDuckStats = ask
 
--- This will define @ViewMessage@ and @AddMessage@ for us.
 $(makeAcidic ''StatDB ['getDuckStats, 'scoreAction])
 
 -- | The duck plugin identity
@@ -87,11 +86,11 @@ theDuck channel seconds = do
             let kills = howManyDucksInThere . concat $ IRC.msg_params msg
             when (kills /= "") $ answerMsg msg kills
             -- Then we check if someone shot some duck
-            let shots = howManyBulletFiredInThere . concat $ IRC.msg_params msg
-            noDucksToShoot <- liftIO $ isEmptyMVar ducksMVar
             when (getDestination msg == channel) $ do
+                let shots = howManyBulletFiredInThere . concat $ IRC.msg_params msg
                 when (shots > 0) $ do
                     _ <- update' statDB (ScoreAction (getSender msg) 0 shots 0)
+                    noDucksToShoot <- liftIO $ isEmptyMVar ducksMVar
                     unless noDucksToShoot $ do
                         ducksWaitingForDeath <- liftIO $ modifyMVar ducksMVar (\x -> return (x - shots, x))
                         _ <- update' statDB (ScoreAction (getSender msg) 0 0 (min ducksWaitingForDeath shots))
@@ -115,7 +114,7 @@ theDuck channel seconds = do
         | otherwise = return ()
     eval _ _ _ _ = return ()
 
--- | Regularly spawns ducks on a channel, just waiting to be shot
+-- | Spawns ducks on a channel, just waiting to be shot
 duckSpawner :: String -> Int -> MVar Int -> Plugin (Env IO) ()
 duckSpawner channel secs ducksMVar = do
     pEnv <- ask
@@ -131,11 +130,11 @@ duckSpawner channel secs ducksMVar = do
         writeMsg . OutgoingMsg $ IRC.Message Nothing "PRIVMSG" [channel, concat thoseDucks]
         liftIO myThreadId >>= lift . delThreadIdFromQuitMVar
 
--- | Shoot as many times are there are ducks in the initial string
+-- | Tels how many shots we can hear from this string
 howManyBulletFiredInThere :: String -> Int
 howManyBulletFiredInThere = sum . concatMap (\y -> map (\x -> if x `L.isInfixOf` y then 1 else 0) bangs) . words
 
--- | Shoot as many times are there are ducks in the initial string
+-- | Shoot as many times there are ducks in the provided string
 howManyDucksInThere :: String -> String
 howManyDucksInThere = concat . concatMap (\y -> map (\x -> if x `L.isInfixOf` y then "PAN! " else "") ducks) . words
 
