@@ -89,29 +89,29 @@ theDuck channel seconds = do
             -- Then we check if someone shot some duck
             let shots = howManyBulletFiredInThere . concat $ IRC.msg_params msg
             noDucksToShoot <- liftIO $ isEmptyMVar ducksMVar
-            when (shots > 0) $ do
-                _ <- update' statDB (ScoreAction (getSender msg) 0 shots 0)
-                when (and [getDestination msg == channel, not noDucksToShoot]) $ do
-                    ducksWaitingForDeath <- liftIO $ modifyMVar ducksMVar (\x -> return (x - shots, x))
-                    _ <- update' statDB (ScoreAction (getSender msg) 0 0 (min ducksWaitingForDeath shots))
-                    when (shots >= ducksWaitingForDeath) $ do
-                        _ <- liftIO $ takeMVar ducksMVar
-                        time <- liftIO $ readMVar timeMVar
-                        duckSpawner channel time ducksMVar
-                        _ <- update' statDB (ScoreAction (getSender msg) 1 0 0)
-                        return ()
-            -- Finally we check if we received some command
-            cmdArgs <- lift $ getCommand msg
-            case cmdArgs of
-                "duck":"freq":time:_ -> do
-                    case reads time :: [(Int, String)] of
-                        (secs,_):_ -> liftIO $ modifyMVar_ timeMVar (\_ -> return secs)
-                        _ -> answerMsg msg "Invalid time value."
-                "duck":"freq":_ -> answerMsg msg $ "You must provide an amount of seconds the bot should wait before spawning "
-                                                 ++ "new ducks after the end of a round."
-                "duck":"stat":_ -> query' statDB GetDuckStats >>= printDuckStats channel
-                "duck":_ -> answerMsg msg "Invalid duck command."
-                _ -> return ()
+            when (getDestination msg == channel) $ do
+                when (shots > 0) $ do
+                    _ <- update' statDB (ScoreAction (getSender msg) 0 shots 0)
+                    unless noDucksToShoot $ do
+                        ducksWaitingForDeath <- liftIO $ modifyMVar ducksMVar (\x -> return (x - shots, x))
+                        _ <- update' statDB (ScoreAction (getSender msg) 0 0 (min ducksWaitingForDeath shots))
+                        when (shots >= ducksWaitingForDeath) $ do
+                            _ <- liftIO $ takeMVar ducksMVar
+                            time <- liftIO $ readMVar timeMVar
+                            duckSpawner channel time ducksMVar
+                            _ <- update' statDB (ScoreAction (getSender msg) 1 0 0)
+                            return ()
+                -- Finally we check if we received some command
+                cmdArgs <- lift $ getCommand msg
+                case cmdArgs of
+                    "duck":"freq":time:_ -> case reads time :: [(Int, String)] of
+                                                (secs,_):_ -> liftIO $ modifyMVar_ timeMVar (\_ -> return secs)
+                                                _ -> answerMsg msg "Invalid time value."
+                    "duck":"freq":_ -> answerMsg msg $ "You must provide an amount of seconds the bot should wait before spawning "
+                                                     ++ "new ducks after the end of a round."
+                    "duck":"stat":_ -> query' statDB GetDuckStats >>= printDuckStats channel
+                    "duck":_ -> answerMsg msg "Invalid duck command."
+                    _ -> return ()
         | otherwise = return ()
     eval _ _ _ _ = return ()
 
