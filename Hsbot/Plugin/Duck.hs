@@ -15,7 +15,6 @@ import Data.Maybe
 import Data.SafeCopy
 import Data.Typeable
 import qualified Network.IRC as IRC
-import Prelude hiding (catch)
 import System.Environment.XDG.BaseDir
 import System.Random
 
@@ -77,11 +76,12 @@ theDuck channel seconds = do
     baseDir <- liftIO $ System.Environment.XDG.BaseDir.getUserDataDir "hsbot"
     statDB <- liftIO $ openAcidStateFrom (baseDir ++ "/duckDB/") emptyStatDB
     ducksMVar <- liftIO newEmptyMVar
+    timeMVar <- liftIO $ newMVar seconds
     duckSpawner channel seconds ducksMVar
-    forever $ readMsg >>= eval statDB ducksMVar
+    forever $ readMsg >>= eval statDB ducksMVar timeMVar
   where
-    eval :: AcidState StatDB -> MVar Int -> Message -> Plugin (Env IO) ()
-    eval statDB ducksMVar (IncomingMsg msg)
+    eval :: AcidState StatDB -> MVar Int -> MVar Int -> Message -> Plugin (Env IO) ()
+    eval statDB ducksMVar timeMVar (IncomingMsg msg)
         | IRC.msg_command msg == "PRIVMSG" = do
             -- First we kill the ducks that we find in the message
             let kills = howManyDucksInThere . concat $ IRC.msg_params msg
@@ -96,17 +96,24 @@ theDuck channel seconds = do
                     _ <- update' statDB (ScoreAction (getSender msg) 0 0 (min ducksWaitingForDeath shots))
                     when (shots >= ducksWaitingForDeath) $ do
                         _ <- liftIO $ takeMVar ducksMVar
-                        duckSpawner channel seconds ducksMVar
+                        time <- liftIO $ readMVar timeMVar
+                        duckSpawner channel time ducksMVar
                         _ <- update' statDB (ScoreAction (getSender msg) 1 0 0)
                         return ()
             -- Finally we check if we received some command
             cmdArgs <- lift $ getCommand msg
             case cmdArgs of
-                "ducks":"stats":_ -> query' statDB GetDuckStats >>= printDuckStats channel
-                "ducks":_ -> answerMsg msg "Invalid duck command."
+                "duck":"freq":time:_ -> do
+                    case reads time :: [(Int, String)] of
+                        (secs,_):_ -> liftIO $ modifyMVar_ timeMVar (\_ -> return secs)
+                        _ -> answerMsg msg "Invalid time value."
+                "duck":"freq":_ -> answerMsg msg $ "You must provide an amount of seconds the bot should wait before spawning "
+                                                 ++ "new ducks after the end of a round."
+                "duck":"stat":_ -> query' statDB GetDuckStats >>= printDuckStats channel
+                "duck":_ -> answerMsg msg "Invalid duck command."
                 _ -> return ()
         | otherwise = return ()
-    eval _ _ _ = return ()
+    eval _ _ _ _ = return ()
 
 -- | Regularly spawns ducks on a channel, just waiting to be shot
 duckSpawner :: String -> Int -> MVar Int -> Plugin (Env IO) ()
