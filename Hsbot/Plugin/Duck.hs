@@ -151,7 +151,7 @@ ducks = [ x : y : z | x <- ">=", y <- face, z <- ["__/", "_/"] ]
      ++ [ L.reverse $ x : y : z | x <- "<=", y <- face, z <- ["__\\", "_\\"] ]
   where
     face :: String
-    face = "oO°@©®ð*òôóø⊕Ω"
+    face = "oO°@©®ð*òôóø⊕ΩꙫꙩꙨ◔"
 
 -- | Weapons can have different noises
 bangs :: [String]
