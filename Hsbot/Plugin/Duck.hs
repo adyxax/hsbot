@@ -22,46 +22,29 @@ import Hsbot.Message
 import Hsbot.Types
 import Hsbot.Utils
 
--- | A user statistic
-data Stat = Stat
-    { statRounds :: Int
-    , statShot   :: Int
-    , statKilled :: Int
-    } deriving (Show, Typeable)
-
--- | Default values for new stat
-emptyStat :: Stat
-emptyStat = Stat { statRounds = 0
-                 , statShot   = 0
-                 , statKilled = 0 }
-
 -- The statistics database
 data StatDB = StatDB
-    { nickStats :: M.Map String Stat
+    { nickStats :: M.Map String Int
     } deriving (Show, Typeable)
 
 -- | Statistics database initial state
 emptyStatDB :: StatDB
 emptyStatDB = StatDB { nickStats = M.empty }
 
-$(deriveSafeCopy 0 'base ''Stat)
 $(deriveSafeCopy 0 'base ''StatDB)
 
 -- | Statistics database transactions
-scoreAction :: String -> Int -> Int -> Int -> Update StatDB ()
-scoreAction sender rounds shots kills = do
+updateScore :: String -> Int -> Update StatDB ()
+updateScore sender score = do
     statDB <- get
     let stats = nickStats statDB
-        stat = fromMaybe emptyStat $ M.lookup sender stats
-        stat' = stat { statRounds = rounds + statRounds stat
-                     , statShot   = shots  + statShot   stat
-                     , statKilled = kills  + statKilled stat }
-    put statDB { nickStats = M.insert sender stat' stats }
+        stat = fromMaybe 0 $ M.lookup sender stats
+    put statDB { nickStats = M.insert sender (stat + score) stats }
 
 getDuckStats :: Query StatDB StatDB
 getDuckStats = ask
 
-$(makeAcidic ''StatDB ['getDuckStats, 'scoreAction])
+$(makeAcidic ''StatDB ['getDuckStats, 'updateScore])
 
 -- | The duck plugin identity
 duck :: PluginId
@@ -85,21 +68,19 @@ theDuck channel seconds = do
             -- First we kill the ducks that we find in the message
             let kills = howManyDucksInThere . concat $ IRC.msg_params msg
             when (kills /= "") $ answerMsg msg kills
-            -- Then we check if someone shot some duck
             when (getDestination msg == channel) $ do
+                -- Then we check if someone shot some duck
                 let shots = howManyBulletFiredInThere . concat $ IRC.msg_params msg
                 when (shots > 0) $ do
-                    _ <- update' statDB (ScoreAction (getSender msg) 0 shots 0)
-                    noDucksToShoot <- liftIO $ isEmptyMVar ducksMVar
-                    unless noDucksToShoot $ do
-                        ducksWaitingForDeath <- liftIO $ modifyMVar ducksMVar (\x -> return (x - shots, x))
-                        _ <- update' statDB (ScoreAction (getSender msg) 0 0 (min ducksWaitingForDeath shots))
-                        when (shots >= ducksWaitingForDeath) $ do
-                            _ <- liftIO $ takeMVar ducksMVar
-                            time <- liftIO $ readMVar timeMVar
-                            duckSpawner channel time ducksMVar
-                            _ <- update' statDB (ScoreAction (getSender msg) 1 0 0)
-                            return ()
+                    empty <- liftIO $ isEmptyMVar ducksMVar
+                    ducksWaitingForDeath <- if empty then return 0
+                                                     else liftIO $ modifyMVar ducksMVar (\x -> return (x - shots, x))
+                    _ <- update' statDB . UpdateScore (getSender msg) $ computeScore ducksWaitingForDeath shots
+                    when (and [ ducksWaitingForDeath > 0, shots >= ducksWaitingForDeath ]) $ do
+                        _ <- liftIO $ takeMVar ducksMVar
+                        time <- liftIO $ readMVar timeMVar
+                        duckSpawner channel time ducksMVar
+                    return ()
                 -- Finally we check if we received some command
                 cmdArgs <- lift $ getCommand msg
                 case cmdArgs of
@@ -113,6 +94,11 @@ theDuck channel seconds = do
                     _ -> return ()
         | otherwise = return ()
     eval _ _ _ _ = return ()
+    computeScore :: Int -> Int -> Int
+    computeScore ducksWaitingForDeath shots
+        | shots < ducksWaitingForDeath = shots - 1
+        | shots == ducksWaitingForDeath = shots + 1
+        | otherwise = negate shots
 
 -- | Spawns ducks on a channel, just waiting to be shot
 duckSpawner :: String -> Int -> MVar Int -> Plugin (Env IO) ()
@@ -162,9 +148,8 @@ printDuckStats channel statDB = do
     sendLine "Duck slaughter simulator - Hall of Fame"
     mapM_ (sendLine . buildLine) $ M.toList (nickStats statDB)
   where
-    buildLine :: (String, Stat) -> String
-    buildLine (nick, stat) = concat [ nick,  ": ", show $ statRounds stat, " rounds won, ", show $ statShot stat
-                                    , " shots fired, ", show $ statKilled stat, " ducks killed" ]
+    buildLine :: (String, Int) -> String
+    buildLine (nick, score) = concat [ nick,  ": ", show score ]
     sendLine :: String -> Plugin (Env IO) ()
     sendLine msg = writeMsg . OutgoingMsg $ IRC.Message Nothing "PRIVMSG" [channel, msg]
 
