@@ -1,7 +1,8 @@
 {-# LANGUAGE TypeFamilies, DeriveDataTypeable, TemplateHaskell #-}
 -- | This module is an IRC plugin that generates and kills ducks
 module Hsbot.Plugin.Duck
-    ( duck
+    ( DuckArgs (..)
+    , duck
     , theDuck
     ) where
 
@@ -50,11 +51,15 @@ $(makeAcidic ''StatDB ['getDuckStats, 'updateScore])
 duck :: PluginId
 duck = PluginId
     { pluginName = "duck"
-    , pluginEp   = theDuck "" 10 }
+    , pluginEp   = theDuck $ DuckArgs { duckChannel = "", duckFreq = 10 } }
+
+data DuckArgs = DuckArgs
+    { duckChannel :: String
+    , duckFreq    :: Int }
 
 -- | An IRC plugin that generates and kills ducks
-theDuck :: String -> Int -> Plugin (Env IO) ()
-theDuck channel seconds = do
+theDuck :: DuckArgs -> Plugin (Env IO) ()
+theDuck (DuckArgs channel seconds) = do
     baseDir <- liftIO $ System.Environment.XDG.BaseDir.getUserDataDir "hsbot"
     statDB <- liftIO $ openAcidStateFrom (baseDir ++ "/duckDB/") emptyStatDB
     ducksMVar <- liftIO newEmptyMVar
