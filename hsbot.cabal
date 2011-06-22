@@ -25,6 +25,7 @@ Library
                     Hsbot.Plugin
                     Hsbot.Plugin.Duck
                     Hsbot.Plugin.Ping
+                    Hsbot.Plugin.Quote
                     Hsbot.Types
                     Hsbot.Utils
   Extensions:       DeriveDataTypeable FlexibleContexts ScopedTypeVariables
@@ -44,6 +45,7 @@ Library
                     safecopy,
                     tls >= 0.6.1,
                     tls-extra >= 0.2.0,
+                    time,
                     xdg-basedir
 
 
