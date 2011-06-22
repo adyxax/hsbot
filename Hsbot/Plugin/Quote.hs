@@ -1,6 +1,8 @@
 {-# LANGUAGE TypeFamilies, DeriveDataTypeable, TemplateHaskell #-}
 -- | This module is an IRC plugin that manages quotes for posterity and legend
 module Hsbot.Plugin.Quote
+--    ( quote
+--    , theQuote
     () where
 
 import Control.Monad.Reader
@@ -94,4 +96,53 @@ getRandomQuote quoteDB = do
     if M.size db > 0
       then getStdRandom (randomR (0, M.size db - 1)) >>= \rInt -> return . Just . snd $ M.elemAt rInt db
       else return Nothing
+
+-- | The duck plugin identity
+quote :: PluginId
+quote = PluginId
+    { pluginName = "quote"
+    , pluginEp   = theQuote }
+
+-- | An IRC plugin that generates and kills ducks
+theQuote :: Plugin (Env IO) ()  -- TODO : an argument for the history size
+theQuote = do
+    baseDir <- liftIO $ System.Environment.XDG.BaseDir.getUserDataDir "hsbot"
+    statDB <- liftIO $ openAcidStateFrom (baseDir ++ "/quoteDB/") emptyQuoteDB
+    forever $ readMsg >>= eval quoteDB
+  where
+    eval :: AcidState QuoteDB -> Message -> Plugin (Env IO) ()
+    eval quoteDB (IncomingMsg msg)
+        | IRC.msg_command msg == "PRIVMSG" = do
+            cmdArgs <- lift $ getCommand msg
+            case cmdArgs of
+                "quote":"help":"append":_ -> answerMsg "quote append QUOTEID QUOTEE QUOTE"
+                "quote":"help":"delete":_ -> do
+                    answerMsg "quote delete QUOTEID [ELTID] :"
+                    answerMsg $ concat [ "  If an ELTID is provided, deletes the ELTID's line (starting from zero) "
+                                       , "in the quote QUOTEID. If not the whole quote is deleted." ]
+                "quote":"help":"quick":_ -> do
+                    answerMsg "quote [quick] QUOTEE [QUOTE] :"
+                    answerMsg $ concat [ "  Begins a quote for QUOTEE. You must provide the keywork quick if the "
+                                       , "QUOTEE's nickname is a reserved word for this quote module. If no QUOTE is "
+                                       , "provided this module lookup it's conversation history and records the "
+                                       , "last sentence of QUOTEE." ]
+                "quote":"help":"show":_ -> answerMsg "quote show { QUOTEID | random [MIN_SCORE] }"
+                "quote":"help":"stat":_ -> do
+                    answerMsg "quote stat"
+                    answerMsg "  Compute statistics about the quote database : Most quoters, most quoted "
+                "quote":"help":[] -> do
+                    answerMsg $ concat [ "Usage: quote { [quick] QUOTEE [QUOTE] | append QUOTEID QUOTEE QUOTE | "
+                                       , "delete QUOTEID [ELTID] | show { QUOTEID | random [MIN_SCORE] } | stat }" ]
+                "quote":"help":_ -> answerMsg "Invalid help topic."
+                "quote":_ -> answerMsg msg "Invalid quote command."
+                "vote":"help":"quick":_ -> do
+                    answerMsg "vote [quick] [QUOTEID] { +1 | -1 | ++ | -- }"
+                    answerMsg $ concat [ "  Vote for a quote. You can also vote for the last active quote on this chan "
+                                       , "by typing something that begins by +1, -1 or ++ or --." ]
+                "vote":"help":[] -> answerMsg $ concat [ "Usage: vote { [quick] [QUOTEID] { +1 | -1 } | show [QUOTEID] | stat }"
+                "vote":"help":_ -> answerMsg "Invalid help topic."
+                "vote":_ -> answerMsg msg "Invalid vote command."
+                _ -> return ()
+        | otherwise = return ()
+    eval _ _ _ _ = return ()
 
