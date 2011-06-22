@@ -7,6 +7,7 @@ import Control.Monad.Reader
 import Control.Monad.State
 import Data.Acid
 import qualified Data.Map as M
+import qualified Network.IRC as IRC
 import System.Random
 import Data.SafeCopy
 import Data.Typeable
@@ -18,17 +19,19 @@ import Hsbot.Utils
 
 -- | A quote element
 data QuoteElt = QuoteElt
-    { eltQuotee :: String
+    { eltQuotee :: IRC.UserName
     , eltQuote  :: String
     } deriving (Show, Typeable)
 
+type QuoteId = Int
+
 -- | A quote object
 data Quote = Quote
-    { quoter    :: String
+    { quoter    :: IRC.UserName
     , quote     :: [QuoteElt]
     , quoteTime :: ClockTime
     , votes     :: Int
-    , voters    :: M.Map String Int
+    , voters    :: M.Map IRC.UserName QuoteID
     } deriving (Show, Typeable)
 
 emptyQuote :: Quote
@@ -40,23 +43,32 @@ emptyQuote = Quote { quoter = ""
 
 -- The Quote database
 data QuoteDB = QuoteDB
-    { nextQuoteId  :: Int
-    , quoteBotDB   :: M.Map Int Quote
-    , lockedQuotes :: M.Map Int (String, ClockTime)
+    { nextQuoteId  :: QuoteID
+    , quoteBotDB   :: M.Map QuoteID Quote
+    , lockedQuotes :: M.Map QuoteID (IRC.UserName, ClockTime)
+    , lastActive   :: M.Map IRC.Channel QuoteID
     } deriving (Show, Typeable)
+
+emptyQuoteDB :: QuoteDB
+emptyQuoteDB = QuoteDB { nextQuoteId  = 0
+                       , quoteBotDB   = M.empty
+                       , lockedQuotes = M.empty
+                       , lastActive   = Nothing }
 
 $(deriveSafeCopy 0 'base ''QuoteElt)
 $(deriveSafeCopy 0 'base ''Quote)
 $(deriveSafeCopy 0 'base ''QuoteDB)
 
 -- | Quote database transactions
-getQuote :: Int -> Query QuoteDB (Maybe Quote)
+getQuote :: QuoteID -> Query QuoteDB (Maybe Quote)
 getQuote quoteId = asks quoteBotDB >>= return . M.lookup quoteId
 
-getQuoteDB :: Query QuoteDB (M.Map Int Quote)
+getQuoteDB :: Query QuoteDB (M.Map QuoteID Quote)
 getQuoteDB = asks quoteBotDB
 
-isQuoteLockedFor :: Int -> String -> ClockTime -> Query QuoteDB (Either String Bool)
+-- TODO : a function for cleaning locks
+
+isQuoteLockedFor :: QuoteID -> IRC.UserName -> ClockTime -> Query QuoteDB (Either String Bool)
 isQuoteLockedFor quoteId requestor now = do
     theQuote <- asks quoteBotDB >>= return . M.lookup quoteId
     case theQuote of
@@ -70,7 +82,7 @@ isQuoteLockedFor quoteId requestor now = do
                 Nothing -> return $ Right True
         Nothing -> return $ Left "QuoteId not found"
 
-lockQuoteIdFor :: Int -> String -> ClockTime -> Update QuoteDB ()
+lockQuoteIdFor :: QuoteID -> IRC.UserName -> ClockTime -> Update QuoteDB ()
 lockQuoteIdFor quoteId requestor now = get >>= \db -> put db { lockedQuotes = M.insert quoteId (requestor, now) (lockedQuotes db) }
 
 $(makeAcidic ''QuoteDB ['getQuote, 'getQuoteDB, 'isQuoteLockedFor, 'lockQuoteIdFor])
