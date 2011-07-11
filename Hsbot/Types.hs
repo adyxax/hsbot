@@ -79,8 +79,6 @@ data Config = Config
 
 data TLSConfig = TLSConfig
     { sslOn       :: Bool
-    , sslCert     :: String
-    , sslKey      :: String
     , sslVersions :: [Network.TLS.Version]
     , sslCiphers  :: [Network.TLS.Cipher]
     , sslVerify   :: Bool

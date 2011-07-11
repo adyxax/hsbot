@@ -8,8 +8,7 @@ import Control.Concurrent
 import Control.Exception (IOException, catch)
 import Control.Monad.Reader
 import Crypto.Random
-import qualified Data.ByteString.Char8 as C
-import qualified Data.ByteString.Lazy as L
+import qualified Data.ByteString.Lazy.UTF8 as L
 import qualified Data.Map as M
 import Network
 import qualified Network.IRC as IRC
@@ -33,15 +32,16 @@ initHsbot config = do
         port = configPort config
     infoM "Hsbot.Core" $ "Connecting to " ++ hostname -- ++ ":" ++ port
     connhdl <- connectTo hostname port
-    hSetBuffering connhdl LineBuffering
+    hSetBuffering connhdl NoBuffering
     hSetEncoding connhdl utf8
     (tls, tlsCtx) <- if sslOn $ configTLS config
         then (do
-            infoM "Hsbot.Core" "TLS init"
+            infoM "Hsbot.Core" "Initializing TLS communication"
             tlsenv <- initTLSEnv (configTLS config)
             randomGen <- newGenIO :: IO SystemRandom
             sCtx <- client tlsenv randomGen connhdl
-            handshake sCtx
+            success <- handshake sCtx
+            unless success $ errorM "Hsbot.Core" "TLS handshake failed"  -- TODO: do some usefull error handling
             return (Just tlsenv, Just sCtx))
         else return (Nothing, Nothing)
     return BotEnv { envBotState    = botState
@@ -103,7 +103,7 @@ runHsbot = do
 
 botReader :: Handle -> Maybe TLSCtx -> Chan Message -> ThreadId -> IO ()
 botReader _ (Just ctx) chan _ = forever $
-    fmap L.toChunks (recvData ctx) >>= mapM_ (handleIncomingStr chan . C.unpack)  -- TODO exceptions
+    fmap L.toString (recvData ctx) >>= handleIncomingStr chan  -- TODO exceptions
 botReader handle Nothing chan fatherThreadId = forever $
     hGetLine handle `catch` handleIOException >>= handleIncomingStr chan
   where
@@ -118,9 +118,9 @@ handleIncomingStr :: Chan Message -> String -> IO ()
 handleIncomingStr chan str =
     case IRC.decode str of
         Just msg -> do
-            debugM "Ircd.Reader" $ "<-- " ++ show msg
+            debugM "Hsbot.Reader" $ "<-- " ++ show msg
             writeChan chan $ IncomingMsg msg
-        Nothing -> debugM "Ircd.Reader" $ "Error: couldn't decode : " ++ str     -- TODO: spam control
+        Nothing -> return ()
 
 botLoop :: Env IO ()
 botLoop = forever $ do
@@ -134,7 +134,7 @@ botLoop = forever $ do
             env <- ask
             let connhdl  = envHandle env
                 tlsCtx   = envTLSCtx env
-            liftIO $ debugM "Ircd.Reader" $ "--> " ++ show outMsg
+            liftIO $ debugM "Hsbot.Loop" $ "--> " ++ show outMsg
             liftIO . sendStr connhdl tlsCtx $ IRC.encode outMsg
 
 terminateHsbot :: Env IO ()
