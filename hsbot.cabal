@@ -23,6 +23,7 @@ Library
                     Hsbot.Core
                     Hsbot.Message
                     Hsbot.Plugin
+                    Hsbot.Plugin.Admin
                     Hsbot.Plugin.Duck
                     Hsbot.Plugin.Ping
                     Hsbot.Types
