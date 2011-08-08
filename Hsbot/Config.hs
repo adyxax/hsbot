@@ -16,6 +16,7 @@ defaultConfig = Config
     , configTLS       = noSSL
     , configAddress   = "localhost"
     , configPort      = PortNumber 6667
+    , configAccess    = []
     , configChannels  = ["#hsbot"]
     , configNicknames = ["hsbot"]
     , configRealname  = "The One True bot, with it's haskell soul."

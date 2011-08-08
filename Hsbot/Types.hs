@@ -1,5 +1,7 @@
 module Hsbot.Types
-    ( Bot
+    ( AccessList (..)
+    , AccessRight (..)
+    , Bot
     , BotState (..)
     , BotStatus (..)
     , BotEnv (..)
@@ -40,6 +42,7 @@ type Bot = StateT BotState
 
 data BotState = BotState
     { botPlugins  :: M.Map String (PluginEnv, ThreadId)
+    , botAccess   :: [AccessList]
     , botHooks    :: [Chan Message]
     , botChannels :: [String]
     , botNickname :: String
@@ -71,11 +74,19 @@ data Config = Config
     , configTLS       :: TLSConfig
     , configAddress   :: String
     , configPort      :: PortID
+    , configAccess    :: [AccessList]
     , configChannels  :: [String]
     , configNicknames :: [String]
     , configRealname  :: String
     , configPlugins   :: [PluginId]
     }
+
+data AccessRight = Admin | JoinPart | Kick | Say deriving (Eq, Show)
+
+data AccessList = AccessList
+    { accessMask :: IRC.Prefix
+    , accessList :: [AccessRight]
+    } deriving (Show)
 
 data TLSConfig = TLSConfig
     { sslOn       :: Bool

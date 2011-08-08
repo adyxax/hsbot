@@ -1,6 +1,7 @@
 module Hsbot.Utils
     ( addThreadIdToQuitMVar
     , delThreadIdFromQuitMVar
+    , hasAccess
     , initTLSEnv
     , sendStr
     , setGlobalQuitMVar
@@ -8,8 +9,10 @@ module Hsbot.Utils
 
 import Control.Concurrent
 import Control.Monad.Reader
+import Control.Monad.State
 import qualified Data.ByteString.Lazy.UTF8 as L
-import Data.List
+import qualified Data.List as L
+import qualified Network.IRC as IRC
 import Network.TLS
 import System.IO
 
@@ -24,12 +27,24 @@ addThreadIdToQuitMVar thrId = do
 delThreadIdFromQuitMVar :: ThreadId -> Env IO ()
 delThreadIdFromQuitMVar thrId = do
     threadIdsMv <- asks envThreadIdsMv
-    liftIO $ modifyMVar_ threadIdsMv (return . delete thrId)
+    liftIO $ modifyMVar_ threadIdsMv (return . L.delete thrId)
 
 setGlobalQuitMVar :: BotStatus -> Env IO ()
 setGlobalQuitMVar status = do
     quitMv <- asks envQuitMv
     liftIO $ putMVar quitMv status
+
+-- Access rights
+hasAccess :: Maybe IRC.Prefix -> AccessRight -> Env IO (Bool)
+hasAccess Nothing _ = return False
+hasAccess (Just mask) right = do
+    botMVar <- asks envBotState
+    liftIO (readMVar botMVar) >>= evalStateT (gets botAccess >>= return . or . map accessMatch)
+  where
+    accessMatch :: AccessList -> Bool
+    accessMatch (AccessList amask arights)
+      | mask == amask = or [L.elem Admin arights, L.elem right arights]
+      | otherwise = False
 
 -- Helpers
 sendStr :: Handle -> Maybe TLSCtx -> String -> IO ()

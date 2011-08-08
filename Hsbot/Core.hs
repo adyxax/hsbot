@@ -76,6 +76,7 @@ runHsbot = do
         mapM_ (liftIO . sendStr connhdl tlsCtx . IRC.encode . IRC.joinChan) channels
         -- Finally we set the new bot state
         asks envBotState >>= liftIO . flip putMVar BotState { botPlugins  = M.empty
+                                                            , botAccess   = configAccess config
                                                             , botHooks    = []
                                                             , botChannels = channels
                                                             , botNickname = nickname }
