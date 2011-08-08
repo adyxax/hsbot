@@ -35,15 +35,15 @@ setGlobalQuitMVar status = do
     liftIO $ putMVar quitMv status
 
 -- Access rights
-hasAccess :: Maybe IRC.Prefix -> AccessRight -> Env IO (Bool)
+hasAccess :: Maybe IRC.Prefix -> AccessRight -> Env IO Bool
 hasAccess Nothing _ = return False
 hasAccess (Just mask) right = do
     botMVar <- asks envBotState
-    liftIO (readMVar botMVar) >>= evalStateT (gets botAccess >>= return . or . map accessMatch)
+    liftIO (readMVar botMVar) >>= evalStateT (fmap (any accessMatch) (gets botAccess))
   where
     accessMatch :: AccessList -> Bool
     accessMatch (AccessList amask arights)
-      | mask == amask = or [L.elem Admin arights, L.elem right arights]
+      | mask == amask = or [Admin `L.elem` arights, right `L.elem` arights]
       | otherwise = False
 
 -- Helpers

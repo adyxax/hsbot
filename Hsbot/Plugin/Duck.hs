@@ -51,7 +51,7 @@ $(makeAcidic ''StatDB ['getDuckStats, 'updateScore])
 duck :: PluginId
 duck = PluginId
     { pluginName = "duck"
-    , pluginEp   = theDuck $ DuckArgs { duckChannel = "", duckFreq = 10 } }
+    , pluginEp   = theDuck DuckArgs { duckChannel = "", duckFreq = 10 } }
 
 data DuckArgs = DuckArgs
     { duckChannel :: String
