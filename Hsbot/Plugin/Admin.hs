@@ -33,11 +33,11 @@ theAdmin = forever $ readMsg >>= eval
                         else answerMsg msg "Only admins can do that."
                 "restart":"help":_ -> answerMsg msg "restart hsbot, reset the running state to config file directives."
                 "restart":_ -> lift (hasAccess (IRC.msg_prefix msg) Admin) >>= \right -> if right
-                        then lift $ setGlobalQuitMVar BotRestart
+                        then lift . setGlobalQuitMVar $ BotRestart (getSender msg ++ " request", Nothing)
                         else answerMsg msg "Only admins can do that."
                 "reload":"help":_ -> answerMsg msg "reload hsbot, and try merge the new config file directives with actual running state)."
                 "reload":_ -> lift (hasAccess (IRC.msg_prefix msg) Admin) >>= \right -> if right
-                        then lift $ setGlobalQuitMVar BotReload
+                        then lift . setGlobalQuitMVar . BotReload $ getSender msg ++ " request"
                         else answerMsg msg "Only admins can do that."
                 _ -> return ()
         | otherwise = return ()

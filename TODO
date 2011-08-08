@@ -1,7 +1,7 @@
 * better hooks?
 * add help MVar
 * add regexes support in accessList prefix
-
+* exception handling on channel and MVar operations?
 
 
 
@@ -9,7 +9,6 @@
 
 :julien!~julien@ogu21.corp PRIVMSG #shbot :@quote graou snif
 
-* Improve configuration file errors display
 * fork process in background
 
 * add a function to answer by /msg to somebody
@@ -18,16 +17,10 @@
 * detect too identical quoting in a raw, or implement quote abort
 * find a better way to track who voted for what? - need authentication against the bot
 
-* write the help module
-* clean the plugin module
-* clean cleaning for the quote module
 * write a channel tracking plugin. Write the part chan command
 
-* add a plugin for admin checks and tracking
+* add a plugin for admin rights checking and user tracking
 * add a plugin for timer functionnalities other plugin could subscribe to (the troll plugin).
-* add a "I have stuff to save so don't kill me too hard" status for plugins
-
-* Make the bot auto-reconnect (/!\ admin plugin!)
 
 * Find a way to prevent the socket from being garbage collected, by writing a connection handler for example
 * Find a way so that not a single message/information would be lost in the case of a reboot

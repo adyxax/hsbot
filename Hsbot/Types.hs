@@ -66,7 +66,7 @@ data PluginId = PluginId
 data Message = IncomingMsg IRC.Message
              | OutgoingMsg IRC.Message
 
-data BotStatus = BotContinue | BotExit | BotReload | BotRestart deriving (Show)
+data BotStatus = BotExit | BotReload String | BotRestart (String, Maybe String) deriving (Read, Show)
 
 -- Config
 data Config = Config

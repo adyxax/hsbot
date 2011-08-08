@@ -8,12 +8,14 @@ module Hsbot.Utils
     ) where
 
 import Control.Concurrent
+import Control.Exception (IOException, catch)
 import Control.Monad.Reader
 import Control.Monad.State
 import qualified Data.ByteString.Lazy.UTF8 as L
 import qualified Data.List as L
 import qualified Network.IRC as IRC
 import Network.TLS
+import Prelude hiding (catch)
 import System.IO
 
 import Hsbot.Types
@@ -47,9 +49,16 @@ hasAccess (Just mask) right = do
       | otherwise = False
 
 -- Helpers
-sendStr :: Handle -> Maybe TLSCtx -> String -> IO ()
-sendStr _ (Just ctx) msg = sendData ctx . L.fromString $ msg ++ "\r\n"
-sendStr handle Nothing msg = hPutStrLn handle $ msg ++ "\r\n"
+sendStr :: BotEnv -> Handle -> Maybe TLSCtx -> String -> IO ()
+sendStr env _ (Just ctx) msg = sendData ctx (L.fromString $ msg ++ "\r\n") `catch` handleIOException env ("sendStr " ++ msg)
+sendStr env handle Nothing msg = hPutStrLn handle (msg ++ "\r\n") `catch` handleIOException env ("sendStr " ++ msg)
+
+handleIOException :: BotEnv -> String -> IOException -> IO ()
+handleIOException env msg ioException = do
+    runReaderT (setGlobalQuitMVar $ BotRestart (show ioException, Just msg)) env
+    myId <- myThreadId
+    killThread myId
+    return ()
 
 -- TLS utils
 initTLSEnv :: TLSConfig -> IO TLSParams
