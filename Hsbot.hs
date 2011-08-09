@@ -43,10 +43,10 @@ startHsbot config = do
          BotExit -> runReaderT terminateHsbot hsbotEnv
          BotReload reason -> do
              runReaderT terminateHsbot hsbotEnv
-             relaunchWithTextState (M.singleton "die_msg" . show $ BotReload reason) Nothing  -- TODO find a way to properly implement that, then insert necessary information in this MVar
+             relaunchWithTextState (State $ M.singleton "die_msg" . show $ BotReload reason) Nothing  -- TODO find a way to properly implement that, then insert necessary information in this MVar
          BotRestart reason -> do
              runReaderT terminateHsbot hsbotEnv
-             relaunchWithTextState (M.singleton "die_msg" . show $ BotRestart reason) Nothing
+             relaunchWithTextState (State $ M.singleton "die_msg" . show $ BotRestart reason) Nothing
 
 hsbot :: Config -> IO ()
 hsbot = Dyre.wrapMain $ Dyre.defaultParams
