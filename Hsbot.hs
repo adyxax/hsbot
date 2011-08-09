@@ -7,11 +7,9 @@ import Config.Dyre.Relaunch
 import Control.Monad.Reader
 import qualified Data.Map as M
 import System.Log.Logger
-import qualified Network.IRC as IRC
 
 import Hsbot.Core
 import Hsbot.Types
-import Hsbot.Utils
 
 data State = State (M.Map String String) deriving (Read, Show)
 
@@ -22,27 +20,23 @@ startHsbot config = do
     case configErrors config of
          Nothing -> return ()
          Just em -> putStrLn $ "Error: " ++ em
-    -- initialization
-    infoM "Hsbot" "Bot initializations"
-    hsbotEnv <- initHsbot config
     -- Handle previous exit state if it exists
-    die_msgs <- case M.lookup "die_msg" buffer of
+    dieMsgs <- case M.lookup "die_msg" buffer of
         Just dieMsg -> case reads dieMsg :: [(BotStatus, String)] of
             (status, _):_ -> case status of
                 BotReload reason -> return ["hsbot reloaded, reason : " ++ reason]
-                BotRestart (reason, Just info) -> return ["hsbot restarted, readon : " ++ reason, "additional information: " ++ info]
-                BotRestart (reason, Nothing) -> return ["hsbot restarted, readon : " ++ reason]
+                BotRestart (reason, Just info) -> return ["hsbot restarted, reason : " ++ reason, "additional information: " ++ info]
+                BotRestart (reason, Nothing) -> return ["hsbot restarted, reason : " ++ reason]
                 BotExit -> return []
             _ -> return ["hsbot die_msg parsing error, this should not happen"]
         Nothing -> return []
-    let connhdl  = envHandle hsbotEnv
-        tlsCtx   = envTLSCtx hsbotEnv
-        channels = configChannels config
-    mapM_ (infoM "Hsbot") die_msgs
-    mapM_ (\msg -> mapM_ (\channel -> sendStr hsbotEnv connhdl tlsCtx . IRC.encode $ IRC.Message Nothing "PRIVMSG" [channel, msg]) channels) die_msgs
+    mapM_ (infoM "Hsbot") dieMsgs
+    -- initialization
+    infoM "Hsbot" "Bot initializations"
+    hsbotEnv <- initHsbot config
     -- main stuff
     infoM "Hsbot" "Bot core starting"
-    status <- runReaderT runHsbot hsbotEnv
+    status <- runReaderT (runHsbot dieMsgs) hsbotEnv
     infoM "Hsbot" $ "Bot core exited with status " ++ show status
     -- Handling exit signal
     case status of

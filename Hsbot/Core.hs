@@ -53,8 +53,8 @@ initHsbot config = do
                   , envTLS         = tls
                   , envTLSCtx      = tlsCtx }
 
-runHsbot :: Env IO BotStatus
-runHsbot = do
+runHsbot :: [String] -> Env IO BotStatus
+runHsbot die_msgs = do
     botNotInitialized <- asks envBotState >>= liftIO . isEmptyMVar
     when botNotInitialized runFirstSteps
     trueRunHsbot
@@ -74,6 +74,8 @@ runHsbot = do
         liftIO . sendStr env connhdl tlsCtx . IRC.encode $ IRC.user nickname hostname "*" (configRealname config)
         -- Then we join channels
         mapM_ (liftIO . sendStr env connhdl tlsCtx . IRC.encode . IRC.joinChan) channels
+        -- We advertise any death message we should
+        mapM_ (\msg -> mapM_ (\channel -> liftIO . sendStr env connhdl tlsCtx . IRC.encode $ IRC.Message Nothing "PRIVMSG" [channel, msg]) channels) die_msgs
         -- Finally we set the new bot state
         asks envBotState >>= liftIO . flip putMVar BotState { botPlugins  = M.empty
                                                             , botAccess   = configAccess config
