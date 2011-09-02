@@ -13,6 +13,7 @@ import Data.Acid
 import qualified Data.List as L
 import qualified Data.Map as M
 import Data.Maybe
+import Data.Ord ()
 import Data.SafeCopy
 import Data.Typeable
 import qualified Network.IRC as IRC
@@ -151,8 +152,13 @@ bangs = [ "PAN", "PAN!" ]
 printDuckStats :: String -> StatDB -> Plugin (Env IO) ()
 printDuckStats channel statDB = do
     sendLine "Duck slaughter simulator - Hall of Fame"
-    mapM_ (sendLine . buildLine) $ M.toList (nickStats statDB)
+    mapM_ (sendLine . buildLine) . reverse . L.sortBy scoreSort $ M.toList (nickStats statDB)
   where
+    scoreSort :: (String, Int) -> (String, Int) -> Ordering
+    scoreSort (_, s1) (_,s2)
+      | s1 < s2 = LT
+      | s1 > s2 = GT
+      | otherwise = EQ
     buildLine :: (String, Int) -> String
     buildLine (nick, score) = concat [ nick,  ": ", show score ]
     sendLine :: String -> Plugin (Env IO) ()
