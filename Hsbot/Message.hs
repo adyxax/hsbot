@@ -30,12 +30,15 @@ answerMsg _ _ = return ()
 
 -- | Get the command in the IRC message if there is one
 getCommand :: IRC.Message -> Env IO [String]
-getCommand (IRC.Message _ _ (_:msg:[])) = do
-    currentBotState <- asks envBotState >>= liftIO . readMVar
-    let cmd:stuff = if msg /= "" then words msg else ["",""]
-    if botNickname currentBotState `L.isPrefixOf` cmd
-        then return stuff
-        else return []
+getCommand (IRC.Message _ _ (_:msg:[])) = getCommandFrom $ words msg
+  where
+    getCommandFrom :: [String] -> Env IO [String]
+    getCommandFrom (cmd:stuff) = do
+        currentBotState <- asks envBotState >>= liftIO . readMVar
+        if botNickname currentBotState `L.isPrefixOf` cmd
+            then return stuff
+            else return []
+    getCommandFrom _ = return []
 getCommand _ = return []
 
 getSender :: IRC.Message -> String

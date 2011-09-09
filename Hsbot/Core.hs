@@ -8,8 +8,7 @@ import Control.Concurrent
 import Control.Exception (IOException, catch)
 import Control.Monad.Reader
 import Crypto.Random
-import qualified Data.ByteString.Char8 as C
-import qualified Data.ByteString.Lazy as L
+import qualified Data.ByteString.Lazy.UTF8 as L
 import qualified Data.Map as M
 import Network
 import qualified Network.IRC as IRC
@@ -33,15 +32,16 @@ initHsbot config = do
         port = configPort config
     infoM "Hsbot.Core" $ "Connecting to " ++ hostname -- ++ ":" ++ port
     connhdl <- connectTo hostname port
-    hSetBuffering connhdl LineBuffering
+    hSetBuffering connhdl NoBuffering
     hSetEncoding connhdl utf8
     (tls, tlsCtx) <- if sslOn $ configTLS config
         then (do
-            infoM "Hsbot.Core" "TLS init"
+            infoM "Hsbot.Core" "Initializing TLS communication"
             tlsenv <- initTLSEnv (configTLS config)
             randomGen <- newGenIO :: IO SystemRandom
             sCtx <- client tlsenv randomGen connhdl
-            handshake sCtx
+            success <- handshake sCtx
+            unless success $ errorM "Hsbot.Core" "TLS handshake failed"  -- TODO: do some usefull error handling
             return (Just tlsenv, Just sCtx))
         else return (Nothing, Nothing)
     return BotEnv { envBotState    = botState
@@ -53,8 +53,8 @@ initHsbot config = do
                   , envTLS         = tls
                   , envTLSCtx      = tlsCtx }
 
-runHsbot :: Env IO BotStatus
-runHsbot = do
+runHsbot :: [String] -> Env IO BotStatus
+runHsbot die_msgs = do
     botNotInitialized <- asks envBotState >>= liftIO . isEmptyMVar
     when botNotInitialized runFirstSteps
     trueRunHsbot
@@ -70,12 +70,15 @@ runHsbot = do
             config   = envConfig env
             nickname = head $ configNicknames config
             channels = configChannels config
-        liftIO . sendStr connhdl tlsCtx . IRC.encode $ IRC.nick nickname
-        liftIO . sendStr connhdl tlsCtx . IRC.encode $ IRC.user nickname hostname "*" (configRealname config)
+        liftIO . sendStr env connhdl tlsCtx . IRC.encode $ IRC.nick nickname
+        liftIO . sendStr env connhdl tlsCtx . IRC.encode $ IRC.user nickname hostname "*" (configRealname config)
         -- Then we join channels
-        mapM_ (liftIO . sendStr connhdl tlsCtx . IRC.encode . IRC.joinChan) channels
+        mapM_ (liftIO . sendStr env connhdl tlsCtx . IRC.encode . IRC.joinChan) channels
+        -- We advertise any death message we should
+        mapM_ (\msg -> mapM_ (\channel -> liftIO . sendStr env connhdl tlsCtx . IRC.encode $ IRC.Message Nothing "PRIVMSG" [channel, msg]) channels) die_msgs
         -- Finally we set the new bot state
         asks envBotState >>= liftIO . flip putMVar BotState { botPlugins  = M.empty
+                                                            , botAccess   = configAccess config
                                                             , botHooks    = []
                                                             , botChannels = channels
                                                             , botNickname = nickname }
@@ -87,9 +90,8 @@ runHsbot = do
         liftIO $ debugM "Hsbot.Core" "Spawning reader thread"
         let connhdl  = envHandle env
             tlsCtx   = envTLSCtx env
-        myOwnThreadId  <- liftIO myThreadId
         chan <- asks envChan
-        (liftIO . forkIO $ botReader connhdl tlsCtx chan myOwnThreadId) >>= addThreadIdToQuitMVar
+        (liftIO . forkIO $ botReader env connhdl tlsCtx chan) >>= addThreadIdToQuitMVar
         -- Then we spawn all plugins
         asks envConfig >>= mapM_ loadPlugin . configPlugins
         -- Finally we spawn the main bot loop
@@ -101,26 +103,26 @@ runHsbot = do
         -- TODO : kill plugin threads
         return code
 
-botReader :: Handle -> Maybe TLSCtx -> Chan Message -> ThreadId -> IO ()
-botReader _ (Just ctx) chan _ = forever $
-    fmap L.toChunks (recvData ctx) >>= mapM_ (handleIncomingStr chan . C.unpack)  -- TODO exceptions
-botReader handle Nothing chan fatherThreadId = forever $
-    hGetLine handle `catch` handleIOException >>= handleIncomingStr chan
-  where
-    handleIOException :: IOException -> IO String
-    handleIOException ioException = do
-        throwTo fatherThreadId ioException
-        myId <- myThreadId
-        killThread myId
-        return ""
+botReader :: BotEnv -> Handle -> Maybe TLSCtx -> Chan Message -> IO ()
+botReader env _ (Just ctx) chan = forever $
+    fmap L.toString (recvData ctx) `catch` handleIOException env  "botReader died" >>= handleIncomingStr chan
+botReader env handle Nothing chan = forever $
+    hGetLine handle `catch` handleIOException env "botReader died" >>= handleIncomingStr chan
+
+handleIOException :: BotEnv -> String -> IOException -> IO String
+handleIOException env msg ioException = do
+    runReaderT (setGlobalQuitMVar $ BotRestart (show ioException, Just msg)) env
+    myId <- myThreadId
+    killThread myId
+    return ""
 
 handleIncomingStr :: Chan Message -> String -> IO ()
 handleIncomingStr chan str =
     case IRC.decode str of
         Just msg -> do
-            debugM "Ircd.Reader" $ "<-- " ++ show msg
+            debugM "Hsbot.Reader" $ "<-- " ++ show msg
             writeChan chan $ IncomingMsg msg
-        Nothing -> debugM "Ircd.Reader" $ "Error: couldn't decode : " ++ str     -- TODO: spam control
+        Nothing -> return ()
 
 botLoop :: Env IO ()
 botLoop = forever $ do
@@ -134,8 +136,8 @@ botLoop = forever $ do
             env <- ask
             let connhdl  = envHandle env
                 tlsCtx   = envTLSCtx env
-            liftIO $ debugM "Ircd.Reader" $ "--> " ++ show outMsg
-            liftIO . sendStr connhdl tlsCtx $ IRC.encode outMsg
+            liftIO $ debugM "Hsbot.Loop" $ "--> " ++ show outMsg
+            liftIO . sendStr env connhdl tlsCtx $ IRC.encode outMsg
 
 terminateHsbot :: Env IO ()
 terminateHsbot = do

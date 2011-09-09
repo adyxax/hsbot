@@ -16,6 +16,7 @@ defaultConfig = Config
     , configTLS       = noSSL
     , configAddress   = "localhost"
     , configPort      = PortNumber 6667
+    , configAccess    = []
     , configChannels  = ["#hsbot"]
     , configNicknames = ["hsbot"]
     , configRealname  = "The One True bot, with it's haskell soul."
@@ -24,12 +25,8 @@ defaultConfig = Config
 defaultTLSConfig :: TLSConfig
 defaultTLSConfig = TLSConfig
     { sslOn       = True
-    , sslCert     = ""
-    , sslKey      = ""
     , sslVersions = [SSL3, TLS10, TLS11, TLS12]
-    , sslCiphers  = [ cipher_null_MD5
-                    , cipher_null_SHA1
-                    , cipher_AES128_SHA1
+    , sslCiphers  = [ cipher_AES128_SHA1
                     , cipher_AES256_SHA1
                     , cipher_RC4_128_MD5
                     , cipher_RC4_128_SHA1

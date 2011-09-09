@@ -11,12 +11,13 @@ import Prelude hiding (catch)
 import Hsbot.Message
 import Hsbot.Types
 
+-- | The ping plugin identity
 ping :: PluginId
 ping = PluginId
     { pluginName = "ping"
     , pluginEp   = thePing }
 
--- | The IrcPlugin monad main function
+-- | An IRC plugin that answer PING requests
 thePing :: Plugin (Env IO) ()
 thePing = forever $ readMsg >>= eval
   where
