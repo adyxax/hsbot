@@ -1,21 +1,21 @@
 {-# LANGUAGE TypeFamilies, DeriveDataTypeable, TemplateHaskell #-}
 -- | This module is an IRC plugin that manages quotes for posterity and legend
 module Hsbot.Plugin.Quote
---    ( quote
---    , theQuote
-    () where
+    ( quote
+    , theQuote
+    ) where
 
 import Control.Monad.Reader
 import Control.Monad.State
 import Data.Acid
+import qualified Data.Map as M
 import Data.SafeCopy
 import Data.Time
 import Data.Time.Clock.POSIX
 import Data.Typeable
-import System.Random
-import qualified Data.Map as M
 import qualified Network.IRC as IRC
 import System.Environment.XDG.BaseDir
+import System.Random
 
 import Hsbot.Message
 import Hsbot.Types
@@ -64,7 +64,7 @@ $(deriveSafeCopy 0 'base ''QuoteDB)
 
 -- | Quote database transactions
 getQuote :: QuoteID -> Query QuoteDB (Maybe Quote)
-getQuote quoteId = asks quoteBotDB >>= return . M.lookup quoteId
+getQuote quoteId = fmap (M.lookup quoteId) (asks quoteBotDB)
 
 getQuoteDB :: Query QuoteDB (M.Map QuoteID Quote)
 getQuoteDB = asks quoteBotDB
@@ -73,10 +73,10 @@ getQuoteDB = asks quoteBotDB
 
 isQuoteLockedFor :: QuoteID -> IRC.UserName -> UTCTime -> Query QuoteDB (Either String Bool)
 isQuoteLockedFor quoteId requestor now = do
-    theQuote <- asks quoteBotDB >>= return . M.lookup quoteId
+    theQuote <- fmap (M.lookup quoteId) (asks quoteBotDB)
     case theQuote of
         Just quote -> do
-            currentLock <- asks lockedQuotes >>= return . M.lookup quoteId
+            currentLock <- fmap (M.lookup quoteId) (asks lockedQuotes)
             case currentLock of
                 Just (owner, lockStamp) ->
                   if owner == requestor
@@ -119,27 +119,27 @@ theQuote = do
                 "quote":"help":"append":_ -> answerMsg msg "quote append QUOTEID QUOTEE QUOTE"
                 "quote":"help":"delete":_ -> do
                     answerMsg msg "quote delete QUOTEID [ELTID] :"
-                    answerMsg msg $ concat [ "  If an ELTID is provided, deletes the ELTID's line (starting from zero) "
-                                           , "in the quote QUOTEID. If not the whole quote is deleted." ]
+                    answerMsg msg $ "  If an ELTID is provided, deletes the ELTID's line (starting from zero) "
+                                 ++ "in the quote QUOTEID. If not the whole quote is deleted."
                 "quote":"help":"quick":_ -> do
                     answerMsg msg "quote [quick] QUOTEE [QUOTE] :"
-                    answerMsg msg $ concat [ "  Begins a quote for QUOTEE. You must provide the keywork quick if the "
-                                           , "QUOTEE's nickname is a reserved word for this quote module. If no QUOTE is "
-                                           , "provided this module lookup it's conversation history and records the "
-                                           , "last sentence of QUOTEE." ]
+                    answerMsg msg $ "  Begins a quote for QUOTEE. You must provide the keywork quick if the "
+                                 ++ "QUOTEE's nickname is a reserved word for this quote module. If no QUOTE is "
+                                 ++ "provided this module lookup it's conversation history and records the "
+                                 ++ "last sentence of QUOTEE."
                 "quote":"help":"show":_ -> answerMsg msg "quote show { QUOTEID | random [MIN_SCORE] }"
                 "quote":"help":"stat":_ -> do
                     answerMsg msg "quote stat"
                     answerMsg msg "  Compute statistics about the quote database : Most quoters, most quoted "
-                "quote":"help":[] -> do
-                    answerMsg msg $ concat [ "Usage: quote { [quick] QUOTEE [QUOTE] | append QUOTEID QUOTEE QUOTE | "
-                                       , "delete QUOTEID [ELTID] | show { QUOTEID | random [MIN_SCORE] } | stat }" ]
+                "quote":"help":[] ->
+                    answerMsg msg $ "Usage: quote { [quick] QUOTEE [QUOTE] | append [QUOTEID] QUOTEE QUOTE | "
+                                 ++ "delete QUOTEID [ELTID] | show { QUOTEID | random [MIN_SCORE] } | stat }"
                 "quote":"help":_ -> answerMsg msg "Invalid help topic."
                 "quote":_ -> answerMsg msg "Invalid quote command."
                 "vote":"help":"quick":_ -> do
                     answerMsg msg "vote [quick] [QUOTEID] { +1 | -1 | ++ | -- }"
-                    answerMsg msg $ concat [ "  Vote for a quote. You can also vote for the last active quote on this chan "
-                                           , "by typing something that begins by +1, -1 or ++ or --." ]
+                    answerMsg msg $ "  Vote for a quote. You can also vote for the last active quote on this chan "
+                                 ++ "by typing something that begins by +1, -1 or ++ or --."
                 "vote":"help":[] -> answerMsg msg "Usage: vote { [quick] [QUOTEID] { +1 | -1 } | show [QUOTEID] | stat }"
                 "vote":"help":_ -> answerMsg msg "Invalid help topic."
                 "vote":_ -> answerMsg msg "Invalid vote command."

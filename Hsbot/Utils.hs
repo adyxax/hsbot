@@ -39,7 +39,7 @@ setGlobalQuitMVar status = do
 -- Access rights
 hasAccess :: Maybe IRC.Prefix -> AccessRight -> Env IO Bool
 hasAccess Nothing _ = return False
-hasAccess (Just mask) right = do
+hasAccess (Just mask) right =
     asks envBotState >>= liftIO . readMVar >>= evalStateT (fmap (any accessMatch) (gets botAccess))
   where
     accessMatch :: AccessList -> Bool
