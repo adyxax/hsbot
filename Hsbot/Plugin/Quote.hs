@@ -9,6 +9,7 @@ import Control.Monad.Reader
 import Control.Monad.State
 import Data.Acid
 import qualified Data.Map as M
+import Data.Maybe
 import Data.SafeCopy
 import Data.Time
 import Data.Time.Clock.POSIX
@@ -49,7 +50,7 @@ data QuoteDB = QuoteDB
     { nextQuoteId  :: QuoteID
     , quoteBotDB   :: M.Map QuoteID Quote
     , lockedQuotes :: M.Map QuoteID (IRC.UserName, UTCTime)
-    , lastActive   :: M.Map IRC.Channel (QuoteID, UTCTime)
+    , lastActive   :: M.Map IRC.Channel QuoteID
     } deriving (Show, Typeable)
 
 emptyQuoteDB :: QuoteDB
@@ -71,24 +72,30 @@ getQuoteDB = asks quoteBotDB
 
 -- TODO : a function for cleaning locks
 
-isQuoteLockedFor :: QuoteID -> IRC.UserName -> UTCTime -> Query QuoteDB (Either String Bool)
+isQuoteLockedFor :: QuoteID -> IRC.UserName -> UTCTime -> Query QuoteDB (Maybe Bool)
 isQuoteLockedFor quoteId requestor now = do
     theQuote <- fmap (M.lookup quoteId) (asks quoteBotDB)
     case theQuote of
-        Just quote -> do
+        Just _ -> do
             currentLock <- fmap (M.lookup quoteId) (asks lockedQuotes)
             case currentLock of
                 Just (owner, lockStamp) ->
                   if owner == requestor
-                    then return $ Right True
-                    else return . Right $ (addUTCTime 300 lockStamp > now)     -- Is the entry older than 5 min?
-                Nothing -> return $ Right True
-        Nothing -> return $ Left "QuoteId not found"
+                    then return $ Just True
+                    else return . Just $ (addUTCTime 300 lockStamp > now)     -- Is the entry older than 5 min?
+                Nothing -> return $ Just True
+        Nothing -> return Nothing
 
 lockQuoteIdFor :: QuoteID -> IRC.UserName -> UTCTime -> Update QuoteDB ()
 lockQuoteIdFor quoteId requestor now = get >>= \db -> put db { lockedQuotes = M.insert quoteId (requestor, now) (lockedQuotes db) }
 
-$(makeAcidic ''QuoteDB ['getQuote, 'getQuoteDB, 'isQuoteLockedFor, 'lockQuoteIdFor])
+setQuote :: QuoteID -> Quote -> Update QuoteDB ()
+setQuote quoteId theQuote = get >>= \db -> put db { quoteBotDB = M.insert quoteId theQuote (quoteBotDB db) }
+
+setLastActiveQuote :: QuoteID -> IRC.Channel -> Update QuoteDB ()
+setLastActiveQuote quoteId channel = get >>= \db -> put db { lastActive = M.insert channel quoteId (lastActive db)}
+
+$(makeAcidic ''QuoteDB ['getQuote, 'getQuoteDB, 'isQuoteLockedFor, 'lockQuoteIdFor, 'setLastActiveQuote, 'setQuote])
 
 -- | gets a random quote from the database
 getRandomQuote :: AcidState QuoteDB -> IO (Maybe Quote)
@@ -116,7 +123,12 @@ theQuote = do
         | IRC.msg_command msg == "PRIVMSG" = do
             cmdArgs <- lift $ getCommand msg
             case cmdArgs of
-                "quote":"help":"append":_ -> answerMsg msg "quote append QUOTEID QUOTEE QUOTE"
+                "quote":"append":quoteID:quotee:quoteTxt ->
+                    case reads quoteID :: [(Int, String)] of
+                        (qid,_):_ -> quoteAppend quoteDB msg qid quotee $ unwords quoteTxt
+                        _ -> answerMsg msg "Invalid quoteID." -- TODO : try with the last active one
+                "quote":"help":"append":_ -> answerMsg msg $ "quote append [QUOTEID] QUOTEE QUOTE"
+                                             ++ "If no QUOTEID is provided, tries to append to the last active quote."
                 "quote":"help":"delete":_ -> do
                     answerMsg msg "quote delete QUOTEID [ELTID] :"
                     answerMsg msg $ "  If an ELTID is provided, deletes the ELTID's line (starting from zero) "
@@ -146,4 +158,22 @@ theQuote = do
                 _ -> return ()
         | otherwise = return ()
     eval _ _ = return ()
+
+quoteAppend :: AcidState QuoteDB -> IRC.Message -> QuoteID -> IRC.UserName -> String -> Plugin (Env IO) ()
+quoteAppend quoteDB msg quoteID quotee text = do
+    now <- liftIO getCurrentTime
+    activeLock <- query' quoteDB (IsQuoteLockedFor quoteID sender now)
+    case activeLock of
+        Just True -> do
+            _ <- update' quoteDB (LockQuoteIdFor quoteID sender now)
+            mQuote <- query' quoteDB (GetQuote quoteID)
+            let newQuote = fromMaybe emptyQuote mQuote
+                newQuote' = newQuote { quotE = quotE newQuote ++ [ QuoteElt { eltQuotee = quotee, eltQuote = text } ] }
+            _ <- update' quoteDB (SetQuote quoteID newQuote')
+            _ <- update' quoteDB (SetLastActiveQuote quoteID (getChannel msg))
+            return ()
+        Just False -> answerMsg msg $ sender ++ ": Someone else is editing this quote right now."
+        Nothing -> answerMsg msg $ sender ++ ":quoteId not found."
+  where
+    sender = getSender msg
 
