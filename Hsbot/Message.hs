@@ -1,5 +1,6 @@
 module Hsbot.Message
     ( answerMsg
+    , getChannel
     , getCommand
     , getDestination
     , getSender
@@ -18,6 +19,7 @@ import Hsbot.Types
 readMsg :: Plugin (Env IO) Message
 readMsg = asks pluginChan >>= liftIO . readChan
 
+-- TODO : remove the Plugin layer since it's useless, and use the envChan instead
 writeMsg :: Message -> Plugin (Env IO) ()
 writeMsg msg = asks pluginMaster >>= liftIO . flip writeChan msg
 
@@ -27,6 +29,11 @@ answerMsg (IRC.Message (Just (IRC.NickName nick _ _)) _ (channel:_)) msg
     | head channel == '#' = writeMsg . OutgoingMsg $ IRC.Message Nothing "PRIVMSG" [channel, msg]
     | otherwise = writeMsg . OutgoingMsg $ IRC.Message Nothing "PRIVMSG" [nick, msg]
 answerMsg _ _ = return ()
+
+-- | Get the channel a message has been posted on
+getChannel :: IRC.Message -> String
+getChannel (IRC.Message _ _ (channel:_)) = channel
+getChannel _ = ""
 
 -- | Get the command in the IRC message if there is one
 getCommand :: IRC.Message -> Env IO [String]
@@ -41,6 +48,7 @@ getCommand (IRC.Message _ _ (_:msg:[])) = getCommandFrom $ words msg
     getCommandFrom _ = return []
 getCommand _ = return []
 
+-- | Get the sender of a message
 getSender :: IRC.Message -> String
 getSender (IRC.Message (Just (IRC.NickName nick _ _)) _ _) = nick
 getSender _ = ""
