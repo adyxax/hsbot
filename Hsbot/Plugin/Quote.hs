@@ -99,7 +99,7 @@ setQuote :: QuoteID -> Quote -> Update QuoteDB ()
 setQuote quoteId theQuote = get >>= \db -> put db { quoteBotDB = M.insert quoteId theQuote (quoteBotDB db) }
 
 getLastActiveQuote :: IRC.Channel -> Query QuoteDB (Maybe QuoteID)
-getLastActiveQuote channel = asks lastActive >>= return . M.lookup channel
+getLastActiveQuote channel = fmap (M.lookup channel) (asks lastActive)
 
 $(makeAcidic ''QuoteDB [ 'getQuote, 'getQuoteDB, 'isQuoteLockedFor, 'lockQuoteIdFor, 'deleteQuote, 'setQuote
                        , 'getLastActiveQuote ])
