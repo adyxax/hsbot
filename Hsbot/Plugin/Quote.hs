@@ -176,9 +176,10 @@ quoteAppend quoteDB msg quoteID quotee text = do
             let newQuote = fromMaybe emptyQuote mQuote
                 newQuote' = newQuote { quotE = quotE newQuote ++ [ QuoteElt { eltQuotee = quotee, eltQuote = text } ] }
             _ <- update' quoteDB (SetQuote quoteID newQuote')
-            answerMsg msg $ sender ++ ": Appended to quote " ++ show quoteID
+            answerMsg msg $ sender ++ ": Appended to quote " ++ show quoteID ++ "."
         Just False -> answerMsg msg $ sender ++ ": Someone else is editing this quote right now."
         Nothing -> answerMsg msg $ sender ++ ":quoteId not found."
   where
     sender = getSender msg
+    channel = getChannel msg
 
