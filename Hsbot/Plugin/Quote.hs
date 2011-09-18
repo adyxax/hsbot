@@ -130,7 +130,11 @@ theQuote = do
                 "quote":"append":quoteID:quotee:quoteTxt ->
                     case reads quoteID :: [(Int, String)] of
                         (qid,_):_ -> quoteAppend quoteDB msg qid quotee $ unwords quoteTxt
-                        _ -> answerMsg msg "Invalid quoteID." -- TODO : try with the last active one
+                        _ -> do
+                            lastQid <- query' quoteDB (GetLastActiveQuote (getChannel msg))
+                            case lastQid of
+                                Just qid -> quoteAppend quoteDB msg qid quotee . unwords $ quoteID : quoteTxt
+                                Nothing -> answerMsg msg $ getSender msg ++ " : Invalid quoteID."
                 "quote":"help":"append":_ -> answerMsg msg $ "quote append [QUOTEID] QUOTEE QUOTE"
                                              ++ "If no QUOTEID is provided, tries to append to the last active quote."
                 "quote":"help":"delete":_ -> do
@@ -175,7 +179,7 @@ quoteAppend quoteDB msg quoteID quotee text = do
                 newQuote' = newQuote { quotE = quotE newQuote ++ [ QuoteElt { eltQuotee = quotee, eltQuote = text } ] }
             _ <- update' quoteDB (SetQuote quoteID newQuote')
             _ <- update' quoteDB (SetLastActiveQuote quoteID (getChannel msg))
-            return ()
+            answerMsg msg $ sender ++ ": Appended to quote " ++ show quoteID
         Just False -> answerMsg msg $ sender ++ ": Someone else is editing this quote right now."
         Nothing -> answerMsg msg $ sender ++ ":quoteId not found."
   where
