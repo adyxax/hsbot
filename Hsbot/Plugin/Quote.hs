@@ -90,13 +90,18 @@ lockQuoteIdFor :: QuoteID -> IRC.UserName -> IRC.Channel -> UTCTime -> Update Qu
 lockQuoteIdFor quoteId requestor channel now = get >>= \db -> put db { lockedQuotes = M.insert quoteId (requestor, now) (lockedQuotes db)
                                                              , lastActive = M.insert channel quoteId (lastActive db) }
 
+deleteQuote :: QuoteID -> IRC.Channel -> Update QuoteDB ()
+deleteQuote quoteId channel = get >>= \db -> put db { quoteBotDB = M.delete quoteId (quoteBotDB db)
+                                            , lockedQuotes = M.delete quoteId (lockedQuotes db)
+                                            , lastActive = M.delete channel (lastActive db) }
+
 setQuote :: QuoteID -> Quote -> Update QuoteDB ()
 setQuote quoteId theQuote = get >>= \db -> put db { quoteBotDB = M.insert quoteId theQuote (quoteBotDB db) }
 
 getLastActiveQuote :: IRC.Channel -> Query QuoteDB (Maybe QuoteID)
 getLastActiveQuote channel = asks lastActive >>= return . M.lookup channel
 
-$(makeAcidic ''QuoteDB [ 'getQuote, 'getQuoteDB, 'isQuoteLockedFor, 'lockQuoteIdFor, 'setQuote
+$(makeAcidic ''QuoteDB [ 'getQuote, 'getQuoteDB, 'isQuoteLockedFor, 'lockQuoteIdFor, 'deleteQuote, 'setQuote
                        , 'getLastActiveQuote ])
 
 -- | gets a random quote from the database
@@ -133,6 +138,15 @@ theQuote = do
                             case lastQid of
                                 Just qid -> quoteAppend quoteDB msg qid quotee . unwords $ quoteID : quoteTxt
                                 Nothing -> answerMsg msg $ getSender msg ++ " : Invalid quoteID."
+                "quote":"delete":quoteID:eltID ->
+                    case reads quoteID :: [(Int, String)] of
+                        (qid,_):_ -> case eltID of
+                            [] -> quoteDelete quoteDB msg qid
+                            eltID':[] -> case reads eltID' :: [(Int, String)] of
+                                (eltid,_):_ -> quoteDeleteElt quoteDB msg qid eltid
+                                _ -> answerMsg msg $ getSender msg ++ ": Invalid elementID."
+                            _ -> answerMsg msg $ getSender msg ++ ": Invalid elementID."
+                        _ -> answerMsg msg $ getSender msg ++ " : Invalid quoteID."
                 "quote":"help":"append":_ -> answerMsg msg $ "quote append [QUOTEID] QUOTEE QUOTE"
                                              ++ "If no QUOTEID is provided, tries to append to the last active quote."
                 "quote":"help":"delete":_ -> do
@@ -182,4 +196,42 @@ quoteAppend quoteDB msg quoteID quotee text = do
   where
     sender = getSender msg
     channel = getChannel msg
+
+quoteDelete :: AcidState QuoteDB -> IRC.Message -> QuoteID -> Plugin (Env IO) ()
+quoteDelete quoteDB msg quoteID = do
+    now <- liftIO getCurrentTime
+    activeLock <- query' quoteDB (IsQuoteLockedFor quoteID sender now)
+    case activeLock of
+        Just True -> do
+            _ <- update' quoteDB (DeleteQuote quoteID channel)
+            answerMsg msg $ sender ++ ": quote " ++ show quoteID ++ "."
+        Just False -> answerMsg msg $ sender ++ ": Someone else is editing this quote right now."
+        Nothing -> answerMsg msg $ sender ++ ":quoteId not found."
+  where
+    sender = getSender msg
+    channel = getChannel msg
+
+quoteDeleteElt :: AcidState QuoteDB -> IRC.Message -> QuoteID -> Int -> Plugin (Env IO) ()
+quoteDeleteElt quoteDB msg quoteID eltID = do
+    now <- liftIO getCurrentTime
+    activeLock <- query' quoteDB (IsQuoteLockedFor quoteID sender now)
+    case activeLock of
+        Just True -> do
+            _ <- update' quoteDB (LockQuoteIdFor quoteID sender channel now)
+            mQuote <- query' quoteDB (GetQuote quoteID)
+            let newQuote = fromMaybe emptyQuote mQuote
+                newQuote' = newQuote { quotE = getRidOfEltFrom (quotE newQuote) }
+            _ <- update' quoteDB (SetQuote quoteID newQuote')
+            answerMsg msg $ sender ++ ": Appended to quote " ++ show quoteID ++ "."
+        Just False -> answerMsg msg $ sender ++ ": Someone else is editing this quote right now."
+        Nothing -> answerMsg msg $ sender ++ ":quoteId not found."
+  where
+    sender = getSender msg
+    channel = getChannel msg
+    getRidOfEltFrom :: [QuoteElt] -> [QuoteElt]
+    getRidOfEltFrom elts
+      | eltID <= 0 = elts
+      | eltID >= length elts = elts
+      | otherwise = let (l, r) = splitAt eltID elts
+                    in l ++ tail r
 
