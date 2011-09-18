@@ -86,8 +86,9 @@ isQuoteLockedFor quoteId requestor now = do
                 Nothing -> return $ Just True
         Nothing -> return Nothing
 
-lockQuoteIdFor :: QuoteID -> IRC.UserName -> UTCTime -> Update QuoteDB ()
-lockQuoteIdFor quoteId requestor now = get >>= \db -> put db { lockedQuotes = M.insert quoteId (requestor, now) (lockedQuotes db) }
+lockQuoteIdFor :: QuoteID -> IRC.UserName -> IRC.Channel -> UTCTime -> Update QuoteDB ()
+lockQuoteIdFor quoteId requestor channel now = get >>= \db -> put db { lockedQuotes = M.insert quoteId (requestor, now) (lockedQuotes db)
+                                                             , lastActive = M.insert channel quoteId (lastActive db) }
 
 setQuote :: QuoteID -> Quote -> Update QuoteDB ()
 setQuote quoteId theQuote = get >>= \db -> put db { quoteBotDB = M.insert quoteId theQuote (quoteBotDB db) }
@@ -95,11 +96,8 @@ setQuote quoteId theQuote = get >>= \db -> put db { quoteBotDB = M.insert quoteI
 getLastActiveQuote :: IRC.Channel -> Query QuoteDB (Maybe QuoteID)
 getLastActiveQuote channel = asks lastActive >>= return . M.lookup channel
 
-setLastActiveQuote :: QuoteID -> IRC.Channel -> Update QuoteDB ()
-setLastActiveQuote quoteId channel = get >>= \db -> put db { lastActive = M.insert channel quoteId (lastActive db)}
-
 $(makeAcidic ''QuoteDB [ 'getQuote, 'getQuoteDB, 'isQuoteLockedFor, 'lockQuoteIdFor, 'setQuote
-                       , 'getLastActiveQuote, 'setLastActiveQuote ])
+                       , 'getLastActiveQuote ])
 
 -- | gets a random quote from the database
 getRandomQuote :: AcidState QuoteDB -> IO (Maybe Quote)
@@ -173,12 +171,11 @@ quoteAppend quoteDB msg quoteID quotee text = do
     activeLock <- query' quoteDB (IsQuoteLockedFor quoteID sender now)
     case activeLock of
         Just True -> do
-            _ <- update' quoteDB (LockQuoteIdFor quoteID sender now)
+            _ <- update' quoteDB (LockQuoteIdFor quoteID sender channel now)
             mQuote <- query' quoteDB (GetQuote quoteID)
             let newQuote = fromMaybe emptyQuote mQuote
                 newQuote' = newQuote { quotE = quotE newQuote ++ [ QuoteElt { eltQuotee = quotee, eltQuote = text } ] }
             _ <- update' quoteDB (SetQuote quoteID newQuote')
-            _ <- update' quoteDB (SetLastActiveQuote quoteID (getChannel msg))
             answerMsg msg $ sender ++ ": Appended to quote " ++ show quoteID
         Just False -> answerMsg msg $ sender ++ ": Someone else is editing this quote right now."
         Nothing -> answerMsg msg $ sender ++ ":quoteId not found."
