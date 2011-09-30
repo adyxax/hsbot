@@ -180,6 +180,16 @@ theQuote = do
                     answerMsg msg $ "Usage: quote { [start] QUOTEE [QUOTE] | append [QUOTEID] QUOTEE QUOTE | "
                                  ++ "delete QUOTEID [ELTID] | show { QUOTEID | random [MIN_SCORE] } | stat }"
                 "quote":"help":_ -> answerMsg msg "Invalid help topic."
+                "quote":"show":"random":[] -> showRandomQuote
+                "quote":"show":quoteID:[] ->
+                    case reads quoteID :: [(Int, String)] of
+                        (qid,_):_ -> do
+                            thisQuote <- query' quoteDB (GetQuote qid)
+                            case thisQuote of
+                                Just this -> quoteShow quoteDB msg qid this
+                                Nothing -> answerMsg msg $ (getSender msg) ++ ": Invalid quoteID or empty database."
+                        _ -> answerMsg msg $ getSender msg ++ " : Invalid quoteID."
+                "quote":"show":[] -> showRandomQuote
                 "quote":"start":quotee:[phrase] -> quoteStart quoteDB msg quotee phrase
                 "quote":quotee:[phrase] -> quoteStart quoteDB msg quotee phrase
                 "quote":_ -> answerMsg msg "Invalid quote command."
@@ -192,6 +202,13 @@ theQuote = do
                 "vote":_ -> answerMsg msg "Invalid vote command."
                 _ -> return ()
         | otherwise = return ()
+      where
+        showRandomQuote :: Plugin (Env IO) ()
+        showRandomQuote = do
+            rquote <- liftIO (getRandomQuote quoteDB)
+            case rquote of
+                Just (that, qid) -> quoteShow quoteDB msg qid that
+                Nothing -> answerMsg msg $ (getSender msg) ++ ": the quote database is empty."
     eval _ _ = return ()
 
 quoteAppend :: AcidState QuoteDB -> IRC.Message -> QuoteID -> IRC.UserName -> String -> Plugin (Env IO) ()
@@ -249,6 +266,19 @@ quoteDeleteElt quoteDB msg quoteID eltID = do
       | eltID >= length elts = elts
       | otherwise = let (l, r) = splitAt eltID elts
                     in l ++ tail r
+
+quoteShow :: AcidState QuoteDB -> IRC.Message -> QuoteID -> Quote -> Plugin (Env IO) ()
+quoteShow quoteDB msg quoteID thatQuote = do
+    mapM_ (answerMsg msg) $ formatQuote
+    update' quoteDB (SetLastActiveQuote channel quoteID)
+  where
+    channel = getChannel msg
+    formatQuote :: [String]
+    formatQuote = ("+-- [" ++ show quoteID ++ "] --- Reported by " ++ quoter thatQuote ++ " on " ++ quoteFrom thatQuote)
+               : map formatElt (quotE thatQuote)
+               ++ [ "+-- Added on " ++ show (quoteTime thatQuote) ++ " --- Score : " ++ show (votes thatQuote) ]
+    formatElt :: QuoteElt -> String
+    formatElt this = "| " ++ eltQuotee this ++ ": " ++ eltQuote this
 
 quoteStart :: AcidState QuoteDB -> IRC.Message -> IRC.UserName -> String -> Plugin (Env IO) ()
 quoteStart quoteDB msg quotee phrase =
