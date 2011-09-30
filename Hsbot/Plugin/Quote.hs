@@ -147,9 +147,11 @@ theQuote = do
                     case reads quoteID :: [(Int, String)] of
                         (qid,_):_ -> quoteAppend quoteDB msg qid quotee $ unwords quoteTxt
                         _ -> do
+                            let quotee' = quoteID
+                                quoteTxt' = quotee : quoteTxt
                             lastQid <- query' quoteDB (GetLastActiveQuote (getChannel msg))
                             case lastQid of
-                                Just qid -> quoteAppend quoteDB msg qid quotee . unwords $ quoteID : quoteTxt
+                                Just qid -> quoteAppend quoteDB msg qid quotee' $ unwords quoteTxt'
                                 Nothing -> answerMsg msg $ getSender msg ++ " : Invalid quoteID."
                 "quote":"delete":quoteID:eltID ->
                     case reads quoteID :: [(Int, String)] of
