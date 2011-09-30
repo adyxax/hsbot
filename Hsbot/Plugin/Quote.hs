@@ -32,6 +32,7 @@ type QuoteID = Int
 -- | A quote object
 data Quote = Quote
     { quoter    :: IRC.UserName
+    , quoteFrom :: IRC.Channel
     , quotE     :: [QuoteElt]
     , quoteTime :: UTCTime
     , votes     :: Int
@@ -40,6 +41,7 @@ data Quote = Quote
 
 emptyQuote :: Quote
 emptyQuote = Quote { quoter = ""
+                   , quoteFrom = ""
                    , quotE = []
                    , quoteTime = posixSecondsToUTCTime 0
                    , votes = 0
@@ -259,6 +261,7 @@ quoteStart quoteDB msg quotee phrase =
         now <- liftIO getCurrentTime
         quoteID <- update' quoteDB (TakeNextQuoteID sender channel now)
         let newQuote = emptyQuote { quoter = sender
+                                  , quoteFrom = channel
                                   , quotE = [ QuoteElt { eltQuotee = quotee, eltQuote = thatQuote } ]
                                   , quoteTime = now }
         _ <- update' quoteDB (SetQuote quoteID newQuote)
