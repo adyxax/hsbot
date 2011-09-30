@@ -192,8 +192,8 @@ theQuote = do
                                 Nothing -> answerMsg msg $ (getSender msg) ++ ": Invalid quoteID or empty database."
                         _ -> answerMsg msg $ getSender msg ++ " : Invalid quoteID."
                 "quote":"show":[] -> showRandomQuote
-                "quote":"start":quotee:[phrase] -> quoteStart quoteDB msg quotee phrase
-                "quote":quotee:[phrase] -> quoteStart quoteDB msg quotee phrase
+                "quote":"start":quotee:phrase -> quoteStart quoteDB msg quotee $ unwords phrase
+                "quote":quotee:phrase -> quoteStart quoteDB msg quotee $ unwords phrase
                 "quote":_ -> answerMsg msg "Invalid quote command."
                 "vote":"help":"quick":_ -> do
                     answerMsg msg "vote [quick] [QUOTEID] { +1 | -1 | ++ | -- }"
