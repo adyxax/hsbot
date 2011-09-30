@@ -162,9 +162,9 @@ theQuote = do
                     answerMsg msg "quote delete QUOTEID [ELTID] :"
                     answerMsg msg $ "  If an ELTID is provided, deletes the ELTID's line (starting from zero) "
                                  ++ "in the quote QUOTEID. If not the whole quote is deleted."
-                "quote":"help":"quick":_ -> do
-                    answerMsg msg "quote [quick] QUOTEE [QUOTE] :"
-                    answerMsg msg $ "  Begins a quote for QUOTEE. You must provide the keywork quick if the "
+                "quote":"help":"start":_ -> do
+                    answerMsg msg "quote [start] QUOTEE [QUOTE] :"
+                    answerMsg msg $ "  Begins a quote for QUOTEE. You must provide the keywork start if the "
                                  ++ "QUOTEE's nickname is a reserved word for this quote module. If no QUOTE is "
                                  ++ "provided this module lookup it's conversation history and records the "
                                  ++ "last sentence of QUOTEE."
@@ -173,9 +173,11 @@ theQuote = do
                     answerMsg msg "quote stat"
                     answerMsg msg "  Compute statistics about the quote database : Most quoters, most quoted "
                 "quote":"help":[] ->
-                    answerMsg msg $ "Usage: quote { [quick] QUOTEE [QUOTE] | append [QUOTEID] QUOTEE QUOTE | "
+                    answerMsg msg $ "Usage: quote { [start] QUOTEE [QUOTE] | append [QUOTEID] QUOTEE QUOTE | "
                                  ++ "delete QUOTEID [ELTID] | show { QUOTEID | random [MIN_SCORE] } | stat }"
                 "quote":"help":_ -> answerMsg msg "Invalid help topic."
+                "quote":"start":quotee:[phrase] -> quoteStart quoteDB msg quotee phrase
+                "quote":quotee:[phrase] -> quoteStart quoteDB msg quotee phrase
                 "quote":_ -> answerMsg msg "Invalid quote command."
                 "vote":"help":"quick":_ -> do
                     answerMsg msg "vote [quick] [QUOTEID] { +1 | -1 | ++ | -- }"
@@ -243,4 +245,21 @@ quoteDeleteElt quoteDB msg quoteID eltID = do
       | eltID >= length elts = elts
       | otherwise = let (l, r) = splitAt eltID elts
                     in l ++ tail r
+
+quoteStart :: AcidState QuoteDB -> IRC.Message -> IRC.UserName -> String -> Plugin (Env IO) ()
+quoteStart quoteDB msg quotee phrase =
+    case phrase of
+      [] -> answerMsg msg "TODO: implement history lookup"
+      that -> quoteThat that
+  where
+    sender = getSender msg
+    channel = getChannel msg
+    quoteThat :: String -> Plugin (Env IO) ()
+    quoteThat thatQuote = do
+        now <- liftIO getCurrentTime
+        quoteID <- update' quoteDB (TakeNextQuoteID sender channel now)
+        let newQuote = emptyQuote { quoter = sender
+                                  , quotE = [ QuoteElt { eltQuotee = quotee, eltQuote = thatQuote } ]
+                                  , quoteTime = now }
+        update' quoteDB (SetQuote quoteID newQuote)
 
