@@ -261,5 +261,6 @@ quoteStart quoteDB msg quotee phrase =
         let newQuote = emptyQuote { quoter = sender
                                   , quotE = [ QuoteElt { eltQuotee = quotee, eltQuote = thatQuote } ]
                                   , quoteTime = now }
-        update' quoteDB (SetQuote quoteID newQuote)
+        _ <- update' quoteDB (SetQuote quoteID newQuote)
+        answerMsg msg $ sender ++ ": new quote added with ID " ++ show quoteID
 
