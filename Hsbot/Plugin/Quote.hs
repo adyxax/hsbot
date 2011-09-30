@@ -166,8 +166,8 @@ theQuote = do
                                              ++ "If no QUOTEID is provided, tries to append to the last active quote."
                 "quote":"help":"delete":_ -> do
                     answerMsg msg "quote delete QUOTEID [ELTID] :"
-                    answerMsg msg $ "  If an ELTID is provided, deletes the ELTID's line (starting from zero) "
-                                 ++ "in the quote QUOTEID. If not the whole quote is deleted."
+                    answerMsg msg $ "  If an ELTID is provided, deletes the ELTID's line in the quote QUOTEID. "
+                                 ++ "If not the whole quote is deleted."
                 "quote":"help":"start":_ -> do
                     answerMsg msg "quote [start] QUOTEE [QUOTE] :"
                     answerMsg msg $ "  Begins a quote for QUOTEE. You must provide the keywork start if the "
@@ -238,7 +238,7 @@ quoteDelete quoteDB msg quoteID = do
     case activeLock of
         Just True -> do
             _ <- update' quoteDB (DeleteQuote quoteID channel)
-            answerMsg msg $ sender ++ ": quote " ++ show quoteID ++ "."
+            answerMsg msg $ sender ++ ": deleted quote " ++ show quoteID ++ "."
         Just False -> answerMsg msg $ sender ++ ": Someone else is editing this quote right now."
         Nothing -> answerMsg msg $ sender ++ ":quoteId not found."
   where
@@ -256,7 +256,7 @@ quoteDeleteElt quoteDB msg quoteID eltID = do
             let newQuote = fromMaybe emptyQuote mQuote
                 newQuote' = newQuote { quotE = getRidOfEltFrom (quotE newQuote) }
             _ <- update' quoteDB (SetQuote quoteID newQuote')
-            answerMsg msg $ sender ++ ": Appended to quote " ++ show quoteID ++ "."
+            answerMsg msg $ sender ++ ": deleted element number " ++ show eltID ++ " from quote " ++ show quoteID ++ "."
         Just False -> answerMsg msg $ sender ++ ": Someone else is editing this quote right now."
         Nothing -> answerMsg msg $ sender ++ ": quoteId not found."
   where
@@ -265,8 +265,8 @@ quoteDeleteElt quoteDB msg quoteID eltID = do
     getRidOfEltFrom :: [QuoteElt] -> [QuoteElt]
     getRidOfEltFrom elts
       | eltID <= 0 = elts
-      | eltID >= length elts = elts
-      | otherwise = let (l, r) = splitAt eltID elts
+      | eltID > length elts = elts
+      | otherwise = let (l, r) = splitAt (eltID -1) elts
                     in l ++ tail r
 
 quoteShow :: AcidState QuoteDB -> IRC.Message -> QuoteID -> Quote -> Plugin (Env IO) ()
