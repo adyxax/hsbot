@@ -103,6 +103,8 @@ setQuote quoteId theQuote = get >>= \db -> put db { quoteBotDB = M.insert quoteI
 getLastActiveQuote :: IRC.Channel -> Query QuoteDB (Maybe QuoteID)
 getLastActiveQuote channel = fmap (M.lookup channel) (asks lastActive)
 
+setLastActiveQuote :: IRC.Channel -> QuoteID -> Update QuoteDB ()
+setLastActiveQuote channel quoteID = get >>= \db -> put db { lastActive = M.insert channel quoteID (lastActive db) }
 takeNextQuoteID :: IRC.UserName -> IRC.Channel -> UTCTime -> Update QuoteDB (QuoteID)
 takeNextQuoteID requestor channel now = do
     db <- get
@@ -113,7 +115,7 @@ takeNextQuoteID requestor channel now = do
     return quoteId
 
 $(makeAcidic ''QuoteDB [ 'getQuote, 'getQuoteDB, 'isQuoteLockedFor, 'lockQuoteIdFor, 'deleteQuote, 'setQuote
-                       , 'getLastActiveQuote, 'takeNextQuoteID ])
+                       , 'getLastActiveQuote, 'setLastActiveQuote, 'takeNextQuoteID ])
 
 -- | gets a random quote from the database
 getRandomQuote :: AcidState QuoteDB -> IO (Maybe (Quote, QuoteID))
