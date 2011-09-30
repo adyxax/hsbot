@@ -90,12 +90,12 @@ isQuoteLockedFor quoteId requestor now = do
 
 lockQuoteIdFor :: QuoteID -> IRC.UserName -> IRC.Channel -> UTCTime -> Update QuoteDB ()
 lockQuoteIdFor quoteId requestor channel now = get >>= \db -> put db { lockedQuotes = M.insert quoteId (requestor, now) (lockedQuotes db)
-                                                             , lastActive = M.insert channel quoteId (lastActive db) }
+                                                                     , lastActive = M.insert channel quoteId (lastActive db) }
 
 deleteQuote :: QuoteID -> IRC.Channel -> Update QuoteDB ()
 deleteQuote quoteId channel = get >>= \db -> put db { quoteBotDB = M.delete quoteId (quoteBotDB db)
-                                            , lockedQuotes = M.delete quoteId (lockedQuotes db)
-                                            , lastActive = M.delete channel (lastActive db) }
+                                                    , lockedQuotes = M.delete quoteId (lockedQuotes db)
+                                                    , lastActive = M.delete channel (lastActive db) }
 
 setQuote :: QuoteID -> Quote -> Update QuoteDB ()
 setQuote quoteId theQuote = get >>= \db -> put db { quoteBotDB = M.insert quoteId theQuote (quoteBotDB db) }
@@ -105,7 +105,8 @@ getLastActiveQuote channel = fmap (M.lookup channel) (asks lastActive)
 
 setLastActiveQuote :: IRC.Channel -> QuoteID -> Update QuoteDB ()
 setLastActiveQuote channel quoteID = get >>= \db -> put db { lastActive = M.insert channel quoteID (lastActive db) }
-takeNextQuoteID :: IRC.UserName -> IRC.Channel -> UTCTime -> Update QuoteDB (QuoteID)
+
+takeNextQuoteID :: IRC.UserName -> IRC.Channel -> UTCTime -> Update QuoteDB QuoteID
 takeNextQuoteID requestor channel now = do
     db <- get
     let quoteId = nextQuoteId db
@@ -189,7 +190,7 @@ theQuote = do
                             thisQuote <- query' quoteDB (GetQuote qid)
                             case thisQuote of
                                 Just this -> quoteShow quoteDB msg qid this
-                                Nothing -> answerMsg msg $ (getSender msg) ++ ": Invalid quoteID or empty database."
+                                Nothing -> answerMsg msg $ getSender msg ++ ": Invalid quoteID or empty database."
                         _ -> answerMsg msg $ getSender msg ++ " : Invalid quoteID."
                 "quote":"show":[] -> showRandomQuote
                 "quote":"start":quotee:phrase -> quoteStart quoteDB msg quotee $ unwords phrase
@@ -210,7 +211,7 @@ theQuote = do
             rquote <- liftIO (getRandomQuote quoteDB)
             case rquote of
                 Just (that, qid) -> quoteShow quoteDB msg qid that
-                Nothing -> answerMsg msg $ (getSender msg) ++ ": the quote database is empty."
+                Nothing -> answerMsg msg $ getSender msg ++ ": the quote database is empty."
     eval _ _ = return ()
 
 quoteAppend :: AcidState QuoteDB -> IRC.Message -> QuoteID -> IRC.UserName -> String -> Plugin (Env IO) ()
@@ -271,7 +272,7 @@ quoteDeleteElt quoteDB msg quoteID eltID = do
 
 quoteShow :: AcidState QuoteDB -> IRC.Message -> QuoteID -> Quote -> Plugin (Env IO) ()
 quoteShow quoteDB msg quoteID thatQuote = do
-    mapM_ (answerMsg msg) $ formatQuote
+    mapM_ (answerMsg msg) formatQuote
     update' quoteDB (SetLastActiveQuote channel quoteID)
   where
     channel = getChannel msg
