@@ -82,7 +82,7 @@ theDuck (DuckArgs channel seconds) = do
                     ducksWaitingForDeath <- if empty then return 0
                                                      else liftIO $ modifyMVar ducksMVar (\x -> return (x - shots, x))
                     _ <- update' statDB . UpdateScore (getSender msg) $ computeScore ducksWaitingForDeath shots
-                    when (and [ ducksWaitingForDeath > 0, shots >= ducksWaitingForDeath ]) $ do
+                    when ((ducksWaitingForDeath > 0) && (shots >= ducksWaitingForDeath)) $ do
                         _ <- liftIO $ takeMVar ducksMVar
                         time <- liftIO $ readMVar timeMVar
                         duckSpawner channel time ducksMVar

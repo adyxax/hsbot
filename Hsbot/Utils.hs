@@ -44,7 +44,7 @@ hasAccess (Just mask) right =
   where
     accessMatch :: AccessList -> Bool
     accessMatch (AccessList amask arights)
-      | mask == amask = or [Admin `L.elem` arights, right `L.elem` arights]
+      | mask == amask = (Admin `L.elem` arights) || (right `L.elem` arights)
       | otherwise = False
 
 -- Helpers
