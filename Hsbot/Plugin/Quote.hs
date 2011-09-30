@@ -116,11 +116,11 @@ $(makeAcidic ''QuoteDB [ 'getQuote, 'getQuoteDB, 'isQuoteLockedFor, 'lockQuoteId
                        , 'getLastActiveQuote, 'takeNextQuoteID ])
 
 -- | gets a random quote from the database
-getRandomQuote :: AcidState QuoteDB -> IO (Maybe Quote)
+getRandomQuote :: AcidState QuoteDB -> IO (Maybe (Quote, QuoteID))
 getRandomQuote quoteDB = do
     db <- query' quoteDB GetQuoteDB
     if M.size db > 0
-      then getStdRandom (randomR (0, M.size db - 1)) >>= \rInt -> return . Just . snd $ M.elemAt rInt db
+      then getStdRandom (randomR (0, M.size db - 1)) >>= \rInt -> return $ Just (snd (M.elemAt rInt db), rInt)
       else return Nothing
 
 -- | The duck plugin identity
@@ -170,7 +170,7 @@ theQuote = do
                                  ++ "QUOTEE's nickname is a reserved word for this quote module. If no QUOTE is "
                                  ++ "provided this module lookup it's conversation history and records the "
                                  ++ "last sentence of QUOTEE."
-                "quote":"help":"show":_ -> answerMsg msg "quote show { QUOTEID | random [MIN_SCORE] }"
+                "quote":"help":"show":_ -> answerMsg msg "quote show { QUOTEID | [random] }"
                 "quote":"help":"stat":_ -> do
                     answerMsg msg "quote stat"
                     answerMsg msg "  Compute statistics about the quote database : Most quoters, most quoted "
