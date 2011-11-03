@@ -33,7 +33,8 @@ defaultTLSConfig = TLSConfig
                     , cipher_AES256_SHA1
                     , cipher_AES128_SHA256
                     , cipher_AES256_SHA256 ]
-    , sslVerify   = True }
+    , sslVerify   = True
+    , sslLogging  = defaultLogging }
 
 noSSL :: TLSConfig
 noSSL = defaultTLSConfig { sslOn = False }

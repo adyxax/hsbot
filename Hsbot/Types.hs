@@ -93,5 +93,6 @@ data TLSConfig = TLSConfig
     , sslVersions :: [Network.TLS.Version]
     , sslCiphers  :: [Network.TLS.Cipher]
     , sslVerify   :: Bool
-    } deriving (Show)
+    , sslLogging  :: TLSLogging
+    }
 

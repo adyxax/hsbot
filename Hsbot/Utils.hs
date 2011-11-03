@@ -64,6 +64,8 @@ initTLSEnv :: TLSConfig -> IO TLSParams
 initTLSEnv ssl = do
     let versions = sslVersions ssl
         ciphers  = sslCiphers ssl
+        logging  = sslLogging ssl
     return $ defaultParams { pAllowedVersions = versions
-                           , pCiphers = ciphers }
+                           , pCiphers = ciphers
+                           , pLogging = logging }
 
