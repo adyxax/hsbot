@@ -84,7 +84,7 @@ isQuoteLockedFor quoteId requestor now = do
                 Just (owner, lockStamp) ->
                   if owner == requestor
                     then return $ Just True
-                    else return . Just $ (addUTCTime 300 lockStamp > now)     -- Is the entry older than 5 min?
+                    else return . Just $ (addUTCTime 300 lockStamp < now)     -- Is the entry older than 5 min?
                 Nothing -> return $ Just True
         Nothing -> return Nothing
 
