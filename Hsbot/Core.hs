@@ -120,7 +120,7 @@ botReader env handle mctx chan = do
                 errorM "Hsbot.Reader" $ "Reader decode error (" ++ show err ++ ") on " ++ str
                 botTrueReader ""
     messages = do
-        msgs <- many1 message
+        msgs <- option [] $ many1 message
         trash <- option "" $ many1 anyChar
         return (msgs, trash)
     message = do
