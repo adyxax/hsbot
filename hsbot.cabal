@@ -42,6 +42,7 @@ Library
                     irc,
                     mtl,
                     network,
+                    parsec,
                     random,
                     safecopy,
                     tls >= 0.8.1,

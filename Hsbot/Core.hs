@@ -17,6 +17,7 @@ import Network.TLS
 import Prelude hiding (catch)
 import System.IO
 import System.Log.Logger
+import Text.ParserCombinators.Parsec
 
 import Hsbot.Plugin
 import Hsbot.Types
@@ -104,25 +105,38 @@ runHsbot die_msgs = do
         return code
 
 botReader :: BotEnv -> Handle -> Maybe (TLSCtx Handle) -> Chan Message -> IO ()
-botReader env _ (Just ctx) chan = forever $
-    fmap L.toString (recvData ctx) `catch` handleIOException env  "botReader died" >>= handleIncomingStr chan
-botReader env handle Nothing chan = forever $
-    hGetLine handle `catch` handleIOException env "botReader died" >>= handleIncomingStr chan
-
-handleIOException :: BotEnv -> String -> IOException -> IO String
-handleIOException env msg ioException = do
-    runReaderT (setGlobalQuitMVar $ BotRestart (show ioException, Just msg)) env
-    myId <- myThreadId
-    killThread myId
-    return ""
-
-handleIncomingStr :: Chan Message -> String -> IO ()
-handleIncomingStr chan str =
-    case IRC.decode str of
-        Just msg -> do
-            debugM "Hsbot.Reader" $ "<-- " ++ show msg
-            writeChan chan $ IncomingMsg msg
-        Nothing -> return ()
+botReader env handle mctx chan = do
+    ioException <- botTrueReader "" `catch` return
+    runReaderT (setGlobalQuitMVar $ BotRestart (show ioException, Just "botReader died")) env
+  where
+    botTrueReader :: String -> IO IOException
+    botTrueReader buff = do
+        str <- readThis handle mctx
+        case parse messages [] (buff ++ str) of
+            Right (msgs, trash) -> do
+                mapM_ handleMessage msgs
+                botTrueReader trash
+            Left err -> do
+                errorM "Hsbot.Reader" $ "Reader decode error (" ++ show err ++ ") on " ++ str
+                botTrueReader ""
+    messages = do
+        msgs <- many1 message
+        trash <- option "" $ many1 anyChar
+        return (msgs, trash)
+    message = do
+        mess <- many1 $ noneOf "\r\n"
+        end <- string "\r\n" <|> string "\r" <|> string "\n"
+        return $ mess ++ end
+    handleMessage :: String -> IO ()
+    handleMessage str =
+        case IRC.decode str of
+            Just msg -> do
+                debugM "Hsbot.Reader" $ "<-- " ++ show msg
+                writeChan chan $ IncomingMsg msg
+            Nothing -> return ()
+    readThis :: Handle -> Maybe (TLSCtx Handle) -> IO String
+    readThis _ (Just ctx) = fmap L.toString (recvData ctx)
+    readThis h Nothing = hGetLine h
 
 botLoop :: Env IO ()
 botLoop = forever $ do
