@@ -34,7 +34,7 @@ data BotEnv = BotEnv
     , envThreadIdsMv :: MVar [ThreadId]
     , envConfig      :: Config
     , envTLS         :: Maybe TLSParams
-    , envTLSCtx      :: Maybe TLSCtx
+    , envTLSCtx      :: Maybe (TLSCtx Handle)
     }
 
 -- The bot monad

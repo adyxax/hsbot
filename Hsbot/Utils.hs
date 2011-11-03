@@ -48,7 +48,7 @@ hasAccess (Just mask) right =
       | otherwise = False
 
 -- Helpers
-sendStr :: BotEnv -> Handle -> Maybe TLSCtx -> String -> IO ()
+sendStr :: BotEnv -> Handle -> Maybe (TLSCtx Handle) -> String -> IO ()
 sendStr env _ (Just ctx) msg = sendData ctx (L.fromString $ msg ++ "\r\n") `catch` handleIOException env ("sendStr " ++ msg)
 sendStr env handle Nothing msg = hPutStrLn handle (msg ++ "\r\n") `catch` handleIOException env ("sendStr " ++ msg)
 

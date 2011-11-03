@@ -103,7 +103,7 @@ runHsbot die_msgs = do
         -- TODO : kill plugin threads
         return code
 
-botReader :: BotEnv -> Handle -> Maybe TLSCtx -> Chan Message -> IO ()
+botReader :: BotEnv -> Handle -> Maybe (TLSCtx Handle) -> Chan Message -> IO ()
 botReader env _ (Just ctx) chan = forever $
     fmap L.toString (recvData ctx) `catch` handleIOException env  "botReader died" >>= handleIncomingStr chan
 botReader env handle Nothing chan = forever $
