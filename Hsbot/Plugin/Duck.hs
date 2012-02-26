@@ -62,7 +62,7 @@ data DuckArgs = DuckArgs
 theDuck :: DuckArgs -> Plugin (Env IO) ()
 theDuck (DuckArgs channel seconds) = do
     baseDir <- liftIO $ System.Environment.XDG.BaseDir.getUserDataDir "hsbot"
-    statDB <- liftIO $ openAcidStateFrom (baseDir ++ "/duckDB/") emptyStatDB
+    statDB <- liftIO $ openLocalStateFrom (baseDir ++ "/duckDB/") emptyStatDB
     ducksMVar <- liftIO newEmptyMVar
     timeMVar <- liftIO $ newMVar seconds
     duckSpawner channel seconds ducksMVar
@@ -81,7 +81,7 @@ theDuck (DuckArgs channel seconds) = do
                     empty <- liftIO $ isEmptyMVar ducksMVar
                     ducksWaitingForDeath <- if empty then return 0
                                                      else liftIO $ modifyMVar ducksMVar (\x -> return (x - shots, x))
-                    _ <- update' statDB . UpdateScore (getSender msg) $ computeScore ducksWaitingForDeath shots
+                    _ <- liftIO . update statDB . UpdateScore (getSender msg) $ computeScore ducksWaitingForDeath shots
                     when ((ducksWaitingForDeath > 0) && (shots >= ducksWaitingForDeath)) $ do
                         _ <- liftIO $ takeMVar ducksMVar
                         time <- liftIO $ readMVar timeMVar
@@ -95,7 +95,7 @@ theDuck (DuckArgs channel seconds) = do
                                                 _ -> answerMsg msg "Invalid time value."
                     "duck":"freq":_ -> answerMsg msg $ "You must provide an amount of seconds the bot should wait before spawning "
                                                      ++ "new ducks after the end of a round."
-                    "duck":"stat":_ -> query' statDB GetDuckStats >>= printDuckStats channel
+                    "duck":"stat":_ -> liftIO (query statDB GetDuckStats) >>= printDuckStats channel
                     "duck":_ -> answerMsg msg "Invalid duck command."
                     _ -> return ()
         | otherwise = return ()

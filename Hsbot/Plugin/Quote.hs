@@ -121,7 +121,7 @@ $(makeAcidic ''QuoteDB [ 'getQuote, 'getQuoteDB, 'isQuoteLockedFor, 'lockQuoteId
 -- | gets a random quote from the database
 getRandomQuote :: AcidState QuoteDB -> IO (Maybe (Quote, QuoteID))
 getRandomQuote quoteDB = do
-    db <- query' quoteDB GetQuoteDB
+    db <- liftIO $ query quoteDB GetQuoteDB
     if M.size db > 0
       then getStdRandom (randomR (0, M.size db - 1)) >>= \rInt -> return $ Just (snd (M.elemAt rInt db), rInt)
       else return Nothing
@@ -136,7 +136,7 @@ quote = PluginId
 theQuote :: Plugin (Env IO) ()  -- TODO : an argument for the history size
 theQuote = do
     baseDir <- liftIO $ System.Environment.XDG.BaseDir.getUserDataDir "hsbot"
-    quoteDB <- liftIO $ openAcidStateFrom (baseDir ++ "/quoteDB/") emptyQuoteDB
+    quoteDB <- liftIO $ openLocalStateFrom (baseDir ++ "/quoteDB/") emptyQuoteDB
     forever $ readMsg >>= eval quoteDB
   where
     eval :: AcidState QuoteDB -> Message -> Plugin (Env IO) ()
@@ -150,7 +150,7 @@ theQuote = do
                         _ -> do
                             let quotee' = quoteID
                                 quoteTxt' = quotee : quoteTxt
-                            lastQid <- query' quoteDB (GetLastActiveQuote (getChannel msg))
+                            lastQid <- liftIO . query quoteDB $ GetLastActiveQuote (getChannel msg)
                             case lastQid of
                                 Just qid -> quoteAppend quoteDB msg qid quotee' $ unwords quoteTxt'
                                 Nothing -> answerMsg msg $ getSender msg ++ " : Invalid quoteID."
@@ -187,7 +187,7 @@ theQuote = do
                 "quote":"show":quoteID:[] ->
                     case reads quoteID :: [(Int, String)] of
                         (qid,_):_ -> do
-                            thisQuote <- query' quoteDB (GetQuote qid)
+                            thisQuote <- liftIO . query quoteDB $ GetQuote qid
                             case thisQuote of
                                 Just this -> quoteShow quoteDB msg qid this
                                 Nothing -> answerMsg msg $ getSender msg ++ ": Invalid quoteID or empty database."
@@ -217,14 +217,14 @@ theQuote = do
 quoteAppend :: AcidState QuoteDB -> IRC.Message -> QuoteID -> IRC.UserName -> String -> Plugin (Env IO) ()
 quoteAppend quoteDB msg quoteID quotee text = do
     now <- liftIO getCurrentTime
-    activeLock <- query' quoteDB (IsQuoteLockedFor quoteID sender now)
+    activeLock <- liftIO . query quoteDB $ IsQuoteLockedFor quoteID sender now
     case activeLock of
         Just True -> do
-            _ <- update' quoteDB (LockQuoteIdFor quoteID sender channel now)
-            mQuote <- query' quoteDB (GetQuote quoteID)
+            _ <- liftIO . update quoteDB $ LockQuoteIdFor quoteID sender channel now
+            mQuote <- liftIO . query quoteDB $ GetQuote quoteID
             let newQuote = fromMaybe emptyQuote mQuote
                 newQuote' = newQuote { quotE = quotE newQuote ++ [ QuoteElt { eltQuotee = quotee, eltQuote = text } ] }
-            _ <- update' quoteDB (SetQuote quoteID newQuote')
+            _ <- liftIO . update quoteDB $ SetQuote quoteID newQuote'
             answerMsg msg $ sender ++ ": Appended to quote " ++ show quoteID ++ "."
         Just False -> answerMsg msg $ sender ++ ": Someone else is editing this quote right now."
         Nothing -> answerMsg msg $ sender ++ ":quoteId not found."
@@ -235,10 +235,10 @@ quoteAppend quoteDB msg quoteID quotee text = do
 quoteDelete :: AcidState QuoteDB -> IRC.Message -> QuoteID -> Plugin (Env IO) ()
 quoteDelete quoteDB msg quoteID = do
     now <- liftIO getCurrentTime
-    activeLock <- query' quoteDB (IsQuoteLockedFor quoteID sender now)
+    activeLock <- liftIO . query quoteDB $ IsQuoteLockedFor quoteID sender now
     case activeLock of
         Just True -> do
-            _ <- update' quoteDB (DeleteQuote quoteID channel)
+            _ <- liftIO . update quoteDB $ DeleteQuote quoteID channel
             answerMsg msg $ sender ++ ": deleted quote " ++ show quoteID ++ "."
         Just False -> answerMsg msg $ sender ++ ": Someone else is editing this quote right now."
         Nothing -> answerMsg msg $ sender ++ ":quoteId not found."
@@ -249,14 +249,14 @@ quoteDelete quoteDB msg quoteID = do
 quoteDeleteElt :: AcidState QuoteDB -> IRC.Message -> QuoteID -> Int -> Plugin (Env IO) ()
 quoteDeleteElt quoteDB msg quoteID eltID = do
     now <- liftIO getCurrentTime
-    activeLock <- query' quoteDB (IsQuoteLockedFor quoteID sender now)
+    activeLock <- liftIO . query quoteDB $ IsQuoteLockedFor quoteID sender now
     case activeLock of
         Just True -> do
-            _ <- update' quoteDB (LockQuoteIdFor quoteID sender channel now)
-            mQuote <- query' quoteDB (GetQuote quoteID)
+            _ <- liftIO . update quoteDB $ LockQuoteIdFor quoteID sender channel now
+            mQuote <- liftIO . query quoteDB $ GetQuote quoteID
             let newQuote = fromMaybe emptyQuote mQuote
                 newQuote' = newQuote { quotE = getRidOfEltFrom (quotE newQuote) }
-            _ <- update' quoteDB (SetQuote quoteID newQuote')
+            _ <- liftIO . update quoteDB $ SetQuote quoteID newQuote'
             answerMsg msg $ sender ++ ": deleted element number " ++ show eltID ++ " from quote " ++ show quoteID ++ "."
         Just False -> answerMsg msg $ sender ++ ": Someone else is editing this quote right now."
         Nothing -> answerMsg msg $ sender ++ ": quoteId not found."
@@ -273,7 +273,7 @@ quoteDeleteElt quoteDB msg quoteID eltID = do
 quoteShow :: AcidState QuoteDB -> IRC.Message -> QuoteID -> Quote -> Plugin (Env IO) ()
 quoteShow quoteDB msg quoteID thatQuote = do
     mapM_ (answerMsg msg) formatQuote
-    update' quoteDB (SetLastActiveQuote channel quoteID)
+    liftIO . update quoteDB $ SetLastActiveQuote channel quoteID
   where
     channel = getChannel msg
     formatQuote :: [String]
@@ -294,11 +294,11 @@ quoteStart quoteDB msg quotee phrase =
     quoteThat :: String -> Plugin (Env IO) ()
     quoteThat thatQuote = do
         now <- liftIO getCurrentTime
-        quoteID <- update' quoteDB (TakeNextQuoteID sender channel now)
+        quoteID <- liftIO . update quoteDB $ TakeNextQuoteID sender channel now
         let newQuote = emptyQuote { quoter = sender
                                   , quoteFrom = channel
                                   , quotE = [ QuoteElt { eltQuotee = quotee, eltQuote = thatQuote } ]
                                   , quoteTime = now }
-        _ <- update' quoteDB (SetQuote quoteID newQuote)
+        _ <- liftIO . update quoteDB $ SetQuote quoteID newQuote
         answerMsg msg $ sender ++ ": new quote added with ID " ++ show quoteID
 
