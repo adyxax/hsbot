@@ -41,8 +41,7 @@ initHsbot config = do
             tlsenv <- initTLSEnv (configTLS config)
             randomGen <- newGenIO :: IO SystemRandom
             sCtx <- client tlsenv randomGen connhdl
-            success <- handshake sCtx
-            unless success $ errorM "Hsbot.Core" "TLS handshake failed"  -- TODO: do some usefull error handling
+            handshake sCtx
             return (Just tlsenv, Just sCtx))
         else return (Nothing, Nothing)
     return BotEnv { envBotState    = botState
@@ -135,7 +134,7 @@ botReader env handle mctx chan = do
                 writeChan chan $ IncomingMsg msg
             Nothing -> return ()
     readThis :: Handle -> Maybe (TLSCtx Handle) -> IO String
-    readThis _ (Just ctx) = fmap L.toString (recvData ctx)
+    readThis _ (Just ctx) = fmap L.toString (recvData' ctx)
     readThis h Nothing = hGetLine h >>= \s -> return $ s ++ "\n"
 
 botLoop :: Env IO ()
