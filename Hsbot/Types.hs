@@ -74,6 +74,7 @@ data Config = Config
     , configTLS       :: TLSConfig
     , configAddress   :: String
     , configPort      :: PortID
+    , configPassword  :: Maybe String
     , configAccess    :: [AccessList]
     , configChannels  :: [String]
     , configNicknames :: [String]

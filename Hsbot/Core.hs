@@ -70,6 +70,9 @@ runHsbot die_msgs = do
             config   = envConfig env
             nickname = head $ configNicknames config
             channels = configChannels config
+        case configPassword config of
+            Just pass -> liftIO . sendStr env connhdl tlsCtx . IRC.encode $ IRC.Message Nothing "PASS" [pass]
+            Nothing -> return ()
         liftIO . sendStr env connhdl tlsCtx . IRC.encode $ IRC.nick nickname
         liftIO . sendStr env connhdl tlsCtx . IRC.encode $ IRC.user nickname hostname "*" (configRealname config)
         -- Then we join channels

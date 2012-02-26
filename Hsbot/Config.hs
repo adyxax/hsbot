@@ -16,6 +16,7 @@ defaultConfig = Config
     , configTLS       = noSSL
     , configAddress   = "localhost"
     , configPort      = PortNumber 6667
+    , configPassword  = Nothing
     , configAccess    = []
     , configChannels  = ["#hsbot"]
     , configNicknames = ["hsbot"]
