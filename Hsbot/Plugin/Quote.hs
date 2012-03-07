@@ -1,7 +1,8 @@
 {-# LANGUAGE TypeFamilies, DeriveDataTypeable, TemplateHaskell #-}
 -- | This module is an IRC plugin that manages quotes for posterity and legend
 module Hsbot.Plugin.Quote
-    ( quote
+    ( QuoteArgs (..)
+    , quote
     , theQuote
     ) where
 
@@ -126,17 +127,20 @@ getRandomQuote quoteDB = do
       then getStdRandom (randomR (0, M.size db - 1)) >>= \rInt -> return $ Just (snd (M.elemAt rInt db), rInt)
       else return Nothing
 
--- | The duck plugin identity
+-- | The quote plugin identity
 quote :: PluginId
 quote = PluginId
     { pluginName = "quote"
-    , pluginEp   = theQuote }
+    , pluginEp   = theQuote QuoteArgs { quoteDbName = "quoteDB" } }
 
--- | An IRC plugin that generates and kills ducks
-theQuote :: Plugin (Env IO) ()  -- TODO : an argument for the history size
-theQuote = do
+data QuoteArgs = QuoteArgs
+    { quoteDbName :: String }
+
+-- | An IRC plugin that handle quotes
+theQuote :: QuoteArgs -> Plugin (Env IO) ()  -- TODO : an argument for the history size
+theQuote (QuoteArgs dbName) = do
     baseDir <- liftIO $ System.Environment.XDG.BaseDir.getUserDataDir "hsbot"
-    quoteDB <- liftIO $ openLocalStateFrom (baseDir ++ "/quoteDB/") emptyQuoteDB
+    quoteDB <- liftIO $ openLocalStateFrom (baseDir ++ "/" ++ dbName ++ "/") emptyQuoteDB
     forever $ readMsg >>= eval quoteDB
   where
     eval :: AcidState QuoteDB -> Message -> Plugin (Env IO) ()
