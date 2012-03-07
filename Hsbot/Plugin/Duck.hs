@@ -2,6 +2,7 @@
 -- | This module is an IRC plugin that generates and kills ducks
 module Hsbot.Plugin.Duck
     ( DuckArgs (..)
+    , defaultDuckArgs
     , duck
     , theDuck
     ) where
@@ -52,17 +53,21 @@ $(makeAcidic ''StatDB ['getDuckStats, 'updateScore])
 duck :: PluginId
 duck = PluginId
     { pluginName = "duck"
-    , pluginEp   = theDuck DuckArgs { duckChannel = "", duckFreq = 10 } }
+    , pluginEp   = theDuck defaultDuckArgs }
 
 data DuckArgs = DuckArgs
     { duckChannel :: String
+    , duckDbName  :: String
     , duckFreq    :: Int }
+
+defaultDuckArgs :: DuckArgs
+defaultDuckArgs = DuckArgs { duckChannel = "", duckDbName = "duckDB", duckFreq = 7200 }
 
 -- | An IRC plugin that generates and kills ducks
 theDuck :: DuckArgs -> Plugin (Env IO) ()
-theDuck (DuckArgs channel seconds) = do
+theDuck (DuckArgs channel dbName seconds) = do
     baseDir <- liftIO $ System.Environment.XDG.BaseDir.getUserDataDir "hsbot"
-    statDB <- liftIO $ openLocalStateFrom (baseDir ++ "/duckDB/") emptyStatDB
+    statDB <- liftIO $ openLocalStateFrom (baseDir ++ "/" ++ dbName ++ "/") emptyStatDB
     ducksMVar <- liftIO newEmptyMVar
     timeMVar <- liftIO $ newMVar seconds
     duckSpawner channel seconds ducksMVar
